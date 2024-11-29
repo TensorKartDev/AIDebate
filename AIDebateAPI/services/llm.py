@@ -1,6 +1,7 @@
 import requests
 import json
 
+
 def speak(messages, model):
     r = requests.post(
         "http://127.0.0.1:11434/api/chat",
