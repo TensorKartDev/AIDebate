@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { fetchNextTurn, submitTurn } from "./services/api";
+import { submitTurn } from "./services/api"; // Updated API call
 import ModeratorInput from "./components/ModeratorInput";
 import Transcript from "./components/Transcript";
 import "./App.css";
 
 function App() {
-  const [history, setHistory] = useState([]);
-  const [topic, setTopic] = useState("");
-  const [isDebateStarted, setIsDebateStarted] = useState(false);
+  const [history, setHistory] = useState([]); // Conversation history
+  const [topic, setTopic] = useState(""); // Debate topic
+  const [isDebateStarted, setIsDebateStarted] = useState(false); // Debate state
   const [participants] = useState([
     { name: "WizardLM2", image: "/images/wizardlm2.png", description: "Xi Jinping, emphasizing collectivism." },
     { name: "LLaMA3", image: "/images/llama3.png", description: "Joe Biden, pragmatic and empathetic." },
@@ -17,26 +17,52 @@ function App() {
   const [currentParticipantIndex, setCurrentParticipantIndex] = useState(0);
   const [persona, setPersona] = useState({
     name: "Moderator",
-    image: "/images/moderator.png", // Default fallback image
-    description: "You are moderating this debate."
+    image: "/images/moderator.png",
+    description: "You are moderating this debate.",
   });
-  
-  // Handle setting the debate topic
-  const handleSetTopic = async (content) => {
-    setTopic(content);
-    setIsDebateStarted(true);
-    setHistory([{ speaker: "Moderator", message: `Debate Topic: ${content}` }]);
-    fetchNextParticipant(); // Trigger the first participant
+
+  // Debug history updates
+  useEffect(() => {
+    console.log("History updated:", history);
+  }, [history]);
+
+  // Handle moderator submission
+  const handleModeratorSubmit = async (content) => {
+    if (!content.trim()) return; // Prevent empty submissions
+
+    try {
+      // Send the topic to the backend API
+      const data = await submitTurn("Moderator", content, topic || content); // Pass topic if already set, else use input
+      setTopic(data.topic || content);
+      setHistory(data.conversation_history || []);
+      setPersona(data.persona || {
+        name: participants[0]?.name,
+        image: "/images/default-avatar.png",
+        description: "No description available.",
+      });
+      setIsDebateStarted(true); // Start the debate if topic is set
+      setCurrentParticipantIndex(0); // Reset participant index
+    } catch (error) {
+      console.error("Error sending topic to API:", error);
+    }
   };
 
   // Fetch the next participant's response
   const fetchNextParticipant = async () => {
     if (currentParticipantIndex < participants.length) {
       const currentParticipant = participants[currentParticipantIndex];
-      const data = await submitTurn(currentParticipant.name, "", topic);
-      setHistory(data.conversation_history);
-      setPersona(data.persona);
-      setCurrentParticipantIndex((prevIndex) => prevIndex + 1);
+      try {
+        const data = await submitTurn(currentParticipant.name, "", topic);
+        setHistory(data.conversation_history || []);
+        setPersona(data.persona || {
+          name: currentParticipant.name,
+          image: "/images/default-avatar.png",
+          description: "No description available.",
+        });
+        setCurrentParticipantIndex((prevIndex) => prevIndex + 1);
+      } catch (error) {
+        console.error("Error fetching participant response:", error);
+      }
     }
   };
 
@@ -62,42 +88,43 @@ function App() {
           ))}
         </ul>
       </div>
+
       <div className="main-panel">
-  <h1>Interactive AI Debate</h1>
-  {topic && <h2>Debate Topic: {topic}</h2>}
+        <h1>Interactive AI Debate</h1>
+        {topic && <h2>Debate Topic: {topic}</h2>}
 
-  {/* Next Speaker Section */}
-  <div className="next-speaker">
-    {persona?.image ? (
-      <img
-        src={persona.image}
-        alt={persona.name || "Speaker"}
-        className="avatar"
-        onError={(e) => { e.target.src = "/images/moderator.png"; }} // Fallback for missing image
-      />
-    ) : (
-      <p>No speaker avatar available</p>
-    )}
-    <p>
-      <strong>Next Speaker:</strong> {persona?.name || "Unknown"}
-    </p>
-    <p>{persona?.description || "No description available"}</p>
-  </div>
+        {/* Transcript */}
+        <Transcript history={history || []} personas={participants.reduce((acc, participant) => {
+          acc[participant.name] = participant;
+          return acc;
+        }, {})} />
 
-  {/* Full-width "Set Topic" Input */}
-  {!isDebateStarted && (
-    <div className="full-width-input">
-      <ModeratorInput onSetTopic={handleSetTopic} />
-    </div>
-  )}
+        {/* Always-visible Moderator Input */}
+        <div className="moderator-input-container">
+          <ModeratorInput onSubmit={handleModeratorSubmit} />
+        </div>
 
-  <Transcript history={history} personas={{}} />
+        {/* Display Next Speaker */}
+        {isDebateStarted && currentParticipantIndex < participants.length && (
+          <div className="next-speaker">
+            <img
+              src={persona.image}
+              alt={persona.name || "Speaker"}
+              className="avatar"
+              onError={(e) => { e.target.src = "/images/default-avatar.png"; }}
+            />
+            <p>
+              <strong>Next Speaker:</strong> {persona.name || "Unknown"}
+            </p>
+            <p>{persona.description || "No description available."}</p>
+          </div>
+        )}
 
-  {isDebateStarted && currentParticipantIndex >= participants.length && (
-    <p>All participants have responded to the topic.</p>
-  )}
-</div>
-      
+        {/* All Participants Responded */}
+        {isDebateStarted && currentParticipantIndex >= participants.length && (
+          <p>All participants have responded to the topic.</p>
+        )}
+      </div>
     </div>
   );
 }

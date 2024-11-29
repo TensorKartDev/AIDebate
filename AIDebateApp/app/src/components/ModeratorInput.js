@@ -1,25 +1,26 @@
 import React, { useState } from "react";
 
-const ModeratorInput = ({ onSetTopic }) => {
-  const [topic, setTopic] = useState("");
+const ModeratorInput = ({ onSubmit }) => {
+  const [input, setInput] = useState("");
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (topic.trim()) {
-      onSetTopic(topic);
-      setTopic("");
+    if (input.trim()) {
+      onSubmit(input); // Pass input to parent handler
+      setInput(""); // Clear input field
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="moderator-input">
+    <form className="moderator-input" onSubmit={handleSubmit}>
       <input
         type="text"
-        placeholder="Set the debate topic..."
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
+        placeholder="Enter a topic or message..."
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        className="moderator-input-box"
       />
-      <button type="submit">Set Topic</button>
+      <button type="submit" className="moderator-submit-button">Send</button>
     </form>
   );
 };
