@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from collections import deque
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
-import time  # For simulating delays
-from services.persona import personas
+from services.persona import personas  # Assume personas are defined in services.persona
+import requests
+import json
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -25,8 +27,6 @@ conversation_history: List[Dict] = []
 debate_topic: str = ""
 stop_flag: bool = False
 
-# Personas with additional details
-
 # Request schema
 class Message(BaseModel):
     speaker: str
@@ -39,7 +39,7 @@ async def submit_turn(message: Message, background_tasks: BackgroundTasks):
     Handles each turn in the debate.
     """
     global conversation_history, debate_topic, stop_flag
-    print(message,debate_topic)
+
     # Moderator interrupts or stops the debate
     if message.message.lower() == "stop":
         stop_flag = True
@@ -50,59 +50,90 @@ async def submit_turn(message: Message, background_tasks: BackgroundTasks):
             "persona": None
         }
 
-    # Moderator resumes or sets a new topic
+    # Moderator sets the topic
     if message.topic:
-        if stop_flag:
-            # Reset stop flag if a new topic is set after stopping
-            stop_flag = False
         debate_topic = message.topic
         conversation_history.append({"speaker": "Moderator", "message": f"Debate Topic: {debate_topic}"})
-        
-        # Start or restart the debate in the background
+        stop_flag = False  # Reset stop flag
+        # Start the debate in the background
         background_tasks.add_task(run_debate, debate_topic)
         return {
             "conversation_history": conversation_history,
             "next_speaker": participants[0],
-            "persona": personas.get(participants[0], {
-                "name": participants[0],
-                "image": "/images/default-avatar.png",
-                "description": "No description available."
-            }),
+            "persona": personas.get(participants[0]),
         }
 
-    # Return an error if no valid action is provided
-    return {"error": "Invalid request. Please provide a topic or a stop command."}
+    return {"error": "Invalid request. Please provide a valid topic or command."}
 
 async def run_debate(topic: str):
     """
-    Handles the debate sequence, ensuring each participant responds sequentially.
+    Manages the debate flow and ensures sequential responses from participants.
     """
     global participants, conversation_history, stop_flag
-
     for _ in range(len(participants)):
         if stop_flag:
             break  # Stop if moderator interrupts
 
         current_speaker = participants[0]
-        persona = personas.get(current_speaker, {})
-        response = generate_ai_response(persona, topic)
+        persona = personas.get(current_speaker)
 
-        # Add response to the conversation history
-        conversation_history.append({"speaker": persona.get("name", current_speaker), "message": response})
+        if not persona:
+            conversation_history.append({"speaker": "System", "message": f"Speaker {current_speaker} not found."})
+            participants.rotate(-1)
+            continue
 
-        # Rotate participants
+        # Prepare system and user messages
+
+        system_prompt = persona["system_prompt"]
+        
+        user_message = f"The topic is: {topic}. Provide your response, stick to the tone and language, pay most attention to the last 5 conversations and respond accordingly"
+       
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                   "{system_prompt}"
+                )
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"### Here is the conversation history:\n{conversation_history}\n\n {user_message}"
+                    
+                )
+            }
+        ]
+        # Generate response using the persona's model
+        try:
+            print("sending topic to ",persona["model_name"] )
+            response = speak(messages, persona["model_name"])
+            conversation_history.append({"speaker": persona["name"], "message": response["content"]})
+        except Exception as e:
+            conversation_history.append({"speaker": "System", "message": f"Error generating response for {persona['name']}: {e}"})
+
+        # Rotate to the next participant
         participants.rotate(-1)
 
-        # Simulate a delay to represent processing time
-        time.sleep(2)
+def speak(messages, model):
+    """
+    Sends messages to the specified model and retrieves the response.
+    """
+    try:
+        r = requests.post(
+            "http://127.0.0.1:11434/api/chat",
+            json={"model": model, "messages": messages, "stream": False}
+        )
+        r.raise_for_status()
+        response = r.json()
+        if "error" in response:
+            raise Exception(response["error"])
+        return response.get("message", {})
+    except Exception as e:
+        raise Exception(f"Error communicating with model {model}: {str(e)}")
 
-def generate_ai_response(persona: Dict, topic: str) -> str:
+@app.get("/history/")
+async def get_history():
     """
-    Simulate generating an AI response based on the persona's system prompt and style.
-    Replace this with actual interaction with an AI model (e.g., OpenAI API).
+    Returns the conversation history.
     """
-    print(persona,topic)
-    system_prompt = persona.get("system_prompt", "Speak in a neutral tone.")
-    style = persona.get("style", "")
-    name = persona.get("name", "Unknown Speaker")
-    return f"{name} responds in style: '{style}' about the topic: '{topic}'."
+    return {"conversation_history": conversation_history}
