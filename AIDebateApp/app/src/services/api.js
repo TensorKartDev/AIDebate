@@ -6,14 +6,14 @@ export const fetchNextTurn = async () => {
     return response.data; // Includes next_speaker and persona
   };
   
-  export const submitTurn = async ({ speaker, topic, message }) => {
-    const payload = { speaker, topic, message };
-    console.log("Submitting payload:", payload); // Debug log
-    const response = await axios.post(`${API_BASE_URL}/submit-turn/`, payload);
-    return response.data;
-  };
-
   export const fetchHistory = async () => {
     const response = await axios.get(`${API_BASE_URL}/history/`);
+    return response.data;
+  };
+  export const submitTurn = async ({ speaker, topic, message }) => {
+    const payload = { speaker, topic, message };
+    console.log("Payload sent to /submit-turn/:", payload);
+    const response = await axios.post(`${API_BASE_URL}/submit-turn/`, payload);
+    console.log("Response from /submit-turn/:", response.data);
     return response.data;
   };

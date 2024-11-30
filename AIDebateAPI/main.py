@@ -34,36 +34,42 @@ class Message(BaseModel):
     topic: str = ""
 
 @app.post("/submit-turn/")
-async def submit_turn(message: Message, background_tasks: BackgroundTasks):
+async def submit_turn(message: Message):
     """
-    Handles each turn in the debate.
+    Handles a single turn in the debate.
     """
-    global conversation_history, debate_topic, stop_flag
+    global conversation_history, debate_topic
 
-    # Moderator interrupts or stops the debate
-    if message.message.lower() == "stop":
-        stop_flag = True
-        conversation_history.append({"speaker": "Moderator", "message": "Debate stopped by Moderator."})
-        return {
-            "conversation_history": conversation_history,
-            "next_speaker": None,
-            "persona": None
-        }
-
-    # Moderator sets the topic
+    # Handle moderator setting the topic
     if message.topic:
-        debate_topic = message.topic
-        conversation_history.append({"speaker": "Moderator", "message": f"Debate Topic: {debate_topic}"})
-        stop_flag = False  # Reset stop flag
-        # Start the debate in the background
-        background_tasks.add_task(run_debate, debate_topic)
-        return {
-            "conversation_history": conversation_history,
-            "next_speaker": participants[0],
-            "persona": personas.get(participants[0]),
-        }
+        if debate_topic != message.topic:
+            debate_topic = message.topic
+            conversation_history.append({"speaker": "Moderator", "message": f"Debate Topic: {debate_topic}"})
+        return {"conversation_history": conversation_history}
 
-    return {"error": "Invalid request. Please provide a valid topic or command."}
+    # Handle model responses
+    if message.speaker:
+        persona = personas.get(message.speaker)
+        if not persona:
+            return {"error": f"Speaker {message.speaker} not found."}
+
+        # Generate response from the model
+        try:
+            system_prompt = persona["system_prompt"]
+            user_message = f"The topic is: {debate_topic}. Provide your response."
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ]
+            response = speak(messages, persona["model_name"])
+            # Add response to conversation history
+            conversation_history.append({"speaker": persona["name"], "message": response["content"]})
+        except Exception as e:
+            return {"error": f"Failed to generate response: {str(e)}"}
+
+        return {"conversation_history": conversation_history[-1:]}  # Only return the latest message
+
+    return {"error": "Invalid request"}
 
 async def run_debate(topic: str):
     """
