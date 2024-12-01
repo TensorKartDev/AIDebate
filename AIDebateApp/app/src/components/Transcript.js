@@ -1,14 +1,21 @@
-import React from "react";
-import ReactMarkdown from "react-markdown";
+import React, { useEffect, useRef } from "react";
 
 const Transcript = ({ history, participants }) => {
+  const transcriptEndRef = useRef(null); // Reference to the end of the transcript
+
+  // Scroll to the last message when history updates
+  useEffect(() => {
+    if (transcriptEndRef.current) {
+      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [history]);
+
   return (
     <div className="transcript">
       {history.map((entry, index) => {
-        // Find the participant matching the speaker's name
         const participant = participants.find((p) => p.name === entry.speaker) || {
           name: entry.speaker,
-          image: entry.image,
+          image: "/images/default-avatar.png",
         };
 
         return (
@@ -16,11 +23,13 @@ const Transcript = ({ history, participants }) => {
             <img src={participant.image} alt={participant.name} className="avatar" />
             <div>
               <strong>{participant.name}:</strong>
-              <ReactMarkdown>{entry.message}</ReactMarkdown>
+              <p>{entry.message}</p>
             </div>
           </div>
         );
       })}
+      {/* Invisible div for auto-scrolling */}
+      <div ref={transcriptEndRef} />
     </div>
   );
 };

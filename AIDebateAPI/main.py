@@ -61,6 +61,7 @@ async def submit_turn(message: Message):
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ]
+            print("calling speak from submit-turn")
             response = speak(messages, persona["model_name"])
             # Add response to conversation history
             conversation_history.append({"speaker": persona["name"], "message": response["content"]})
@@ -98,7 +99,7 @@ async def run_debate(topic: str):
             {
                 "role": "system",
                 "content": (
-                   "{system_prompt}"
+                   f"{system_prompt}"
                 )
             },
             {
@@ -111,7 +112,7 @@ async def run_debate(topic: str):
         ]
         # Generate response using the persona's model
         try:
-            print("sending topic to ",persona["model_name"] )
+            print("calling speak from run_debate ",persona["model_name"] )
             response = speak(messages, persona["model_name"])
             conversation_history.append({"speaker": persona["name"], "message": response["content"]})
         except Exception as e:
