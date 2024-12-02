@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from collections import deque
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
-from services.persona import personas  # Assume personas are defined in services.persona
+from services.persona import get_personas  # Assume personas are defined in services.persona
 import requests
 import json
 
@@ -26,7 +26,7 @@ participants = deque(["WizardLM2", "LLaMA3", "LLaMA2", "Mistral"])
 conversation_history: List[Dict] = []
 debate_topic: str = ""
 stop_flag: bool = False
-
+personas = get_personas()
 # Request schema
 class Message(BaseModel):
     speaker: str
@@ -36,39 +36,37 @@ class Message(BaseModel):
 @app.post("/submit-turn/")
 async def submit_turn(message: Message):
     """
-    Handles a single turn in the debate.
+    Handles setting the topic and sending the topic to each participant.
     """
     global conversation_history, debate_topic
 
-    # Handle moderator setting the topic
+    # Set the debate topic
     if message.topic:
         if debate_topic != message.topic:
             debate_topic = message.topic
             conversation_history.append({"speaker": "Moderator", "message": f"Debate Topic: {debate_topic}"})
         return {"conversation_history": conversation_history}
 
-    # Handle model responses
+    # Process a participant's turn
     if message.speaker:
         persona = personas.get(message.speaker)
         if not persona:
             return {"error": f"Speaker {message.speaker} not found."}
 
         # Generate response from the model
+        system_prompt = persona["system_prompt"]
+        user_message = f"The topic is: {debate_topic}. Provide your response."
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ]
         try:
-            system_prompt = persona["system_prompt"]
-            user_message = f"The topic is: {debate_topic}. Provide your response."
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ]
-            print("calling speak from submit-turn")
             response = speak(messages, persona["model_name"])
-            # Add response to conversation history
             conversation_history.append({"speaker": persona["name"], "message": response["content"]})
         except Exception as e:
             return {"error": f"Failed to generate response: {str(e)}"}
 
-        return {"conversation_history": conversation_history[-1:]}  # Only return the latest message
+        return {"conversation_history": conversation_history[-1:]}
 
     return {"error": "Invalid request"}
 

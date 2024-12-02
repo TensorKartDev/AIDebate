@@ -17,3 +17,15 @@ export const fetchNextTurn = async () => {
     console.log("Response from /submit-turn/:", response.data);
     return response.data;
   };
+  export const fetchPersonas = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/personas/`);
+      if (!response.ok) {
+        throw new Error(`Error fetching personas: ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error in fetchPersonas:", error);
+      throw error;
+    }
+  };

@@ -1,98 +1,125 @@
-import React, { useState } from "react";
-import { submitTurn } from "./services/api";
+import React, { useState, useEffect } from "react";
+import { fetchPersonas, submitTurn } from "./services/api";
 import ModeratorInput from "./components/ModeratorInput";
 import Transcript from "./components/Transcript";
+import "bootstrap/dist/css/bootstrap.min.css"; // Import Bootstrap CSS
 import "./App.css";
 
 function App() {
-  const [history, setHistory] = useState([]); // Conversation history
-  const [topic, setTopic] = useState(""); // Debate topic
-  const [loading, setLoading] = useState(false); // Spinner for waiting
-  const [currentParticipantIndex, setCurrentParticipantIndex] = useState(0); // Index of the current speaker
-  const [participants] = useState([
-    { name: "WizardLM2", image: "/images/Xi Jinping.jpg", description: "Xi Jinping, emphasizing collectivism." },
-    { name: "LLaMA3", image: "/images/Joe_Biden.jpg", description: "Joe Biden, pragmatic and empathetic." },
-    { name: "LLaMA2", image: "/images/Donald_Trump.jpg", description: "Donald Trump, bold and assertive." },
-    { name: "Mistral", image: "/images/Angela_Merkel.jpg", description: "Angela Merkel, analytical and calm." },
-  ]);
+  const [personas, setPersonas] = useState({});
+  const [participants, setParticipants] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [topic, setTopic] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [processing, setProcessing] = useState(false);
+  const [currentSpeaker, setCurrentSpeaker] = useState(null);
 
-  const handleModeratorSubmit = async (content) => {
-    if (!content.trim()) return;
+  useEffect(() => {
+    const loadPersonas = async () => {
+      try {
+        const data = await fetchPersonas();
+        setPersonas(data);
+        setParticipants(Object.keys(data));
+      } catch (error) {
+        console.error("Failed to load personas:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPersonas();
+  }, []);
 
-    const payload = { speaker: "Moderator", topic: content, message: "" };
-    setLoading(true);
-
+  const handleSetTopic = async (newTopic) => {
+    setProcessing(true);
     try {
-      const data = await submitTurn(payload);
+      setTopic(newTopic);
 
-      // Add topic to history if not already added
-      if (!history.some((entry) => entry.message === `Debate Topic: ${content}`)) {
-        setTopic(content);
-        setHistory((prevHistory) => [...prevHistory, ...data.conversation_history]);
+      const topicPayload = { speaker: "Moderator", message: "", topic: newTopic };
+      const topicResponse = await submitTurn(topicPayload);
+
+      if (topicResponse?.conversation_history) {
+        setHistory(topicResponse.conversation_history);
       }
 
-      // Start the debate flow
-      setCurrentParticipantIndex(0);
-      await startDebateFlow(content);
+      for (const participant of participants) {
+        setCurrentSpeaker(participant);
+        const responsePayload = { speaker: participant, message: "" };
+        const response = await submitTurn(responsePayload);
+
+        if (response?.conversation_history) {
+          setHistory((prevHistory) => [...prevHistory, ...response.conversation_history]);
+        } else {
+          console.error(`Invalid response for participant ${participant}:`, response);
+        }
+      }
     } catch (error) {
-      console.error("Error submitting topic:", error);
+      console.error("Error handling topic and responses:", error);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const startDebateFlow = async (content) => {
-    for (let i = 0; i < participants.length; i++) {
-      setCurrentParticipantIndex(i);
-      await handleParticipantResponse(participants[i], content);
-    }
-  };
-
-  const handleParticipantResponse = async (participant, content) => {
-    const payload = { speaker: participant.name, topic: "", message: "" };
-    setLoading(true);
-
-    try {
-      const data = await submitTurn(payload);
-      setHistory((prevHistory) => [...prevHistory, ...data.conversation_history]);
-    } catch (error) {
-      console.error(`Error fetching response from ${participant.name}:`, error);
-    } finally {
-      setLoading(false);
+      setProcessing(false);
+      setCurrentSpeaker(null);
     }
   };
 
   return (
-    <div className="App">
-      <div className="left-panel">
-        <h2>Participants</h2>
-        <ul>
-          {participants.map((participant, index) => (
-            <li key={index}>
-              <img src={participant.image} alt={participant.name} className="avatar" />
-              <div>
-                <strong>{participant.name}</strong>
-                <p>{participant.description}</p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+    <div className="container-fluid">
+      <div className="row">
+        {/* Left Panel */}
+        <div className="col-md-3 left-panel">
+          <h2>Participants</h2>
+          <ul>
+            {participants.map((participant) => (
+              <li key={participant}>
+                <img
+                  src={personas[participant]?.image || "/images/default-avatar.png"}
+                  alt={personas[participant]?.name || participant}
+                  className="avatar"
+                  onError={(e) => {
+                    e.target.src = "/images/default-avatar.png";
+                  }}
+                />
+                <div>
+                  <strong>{personas[participant]?.name || participant}</strong>
+                  <p>{personas[participant]?.description || "No description available"}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
 
-      <div className="main-panel">
-        <h1>Interactive AI Debate</h1>
-        {topic && <h2>Debate Topic: {topic}</h2>}
+        <div className="main-panel">
+  {/* Scrollable Transcript Section */}
+  <div className="transcript-container">
+    <h1>Interactive AI Debate</h1>
+    {topic && <h2>Debate Topic: {topic}</h2>}
+    <Transcript history={history} participants={participants} personas={personas} />
+  </div>
 
-        {/* Pass participants to Transcript */}
-        <Transcript history={history} participants={participants} />
+  {/* Spinner Section */}
+  {processing && currentSpeaker && (
+    <div className="bottom-spinner-container">
+      {/* Speaker's Avatar */}
+      <img
+        src={personas[currentSpeaker]?.image || "/images/default-avatar.png"}
+        alt={personas[currentSpeaker]?.name || "Current Speaker"}
+        className="spinner-avatar"
+        onError={(e) => {
+          e.target.src = "/images/default-avatar.png"; // Fallback for missing images
+        }}
+      />
 
-        <ModeratorInput onSubmit={handleModeratorSubmit} />
+      {/* Spinner Animation */}
+      <div className="spinner"></div>
 
-        {loading && (
-          <div className="spinner">
-            
-          </div>
-        )}
+      {/* Speaker's Name */}
+      <p className="spinner-text">
+        Processing response from {personas[currentSpeaker]?.name || currentSpeaker}...
+      </p>
+    </div>
+  )}
+
+  {/* Fixed Textbox Section */}
+  <ModeratorInput onSetTopic={handleSetTopic} />
+</div>
       </div>
     </div>
   );
