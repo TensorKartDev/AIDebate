@@ -144,3 +144,12 @@ async def get_history():
     Returns the conversation history.
     """
     return {"conversation_history": conversation_history}
+
+@app.get("/personas/")
+async def get_personas():
+    """
+    Fetch personas from configuration.
+    """
+    with open("personas.json", "r") as file:
+        personas = json.load(file)
+    return personas
