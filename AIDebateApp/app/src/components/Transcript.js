@@ -1,35 +1,36 @@
 import React, { useEffect, useRef } from "react";
 
-const Transcript = ({ history, participants }) => {
-  const transcriptEndRef = useRef(null); // Reference to the end of the transcript
+const Transcript = ({ history, participants, personas }) => {
+  const transcriptRef = useRef(null);
 
-  // Scroll to the last message when history updates
   useEffect(() => {
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (transcriptRef.current) {
+      // Scroll to the bottom when history updates
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [history]);
 
   return (
-    <div className="transcript">
+    <div className="transcript" ref={transcriptRef}>
       {history.map((entry, index) => {
-        const participant = participants.find((p) => p.name === entry.speaker) || {
-          name: entry.speaker,
-          image: "/images/default-avatar.png",
-        };
-
+        const persona = personas[entry.speaker];
         return (
           <div key={index} className="transcript-entry">
-            <img src={participant.image} alt={participant.name} className="avatar" />
+            <img
+              src={persona?.image || "/images/default-avatar.png"}
+              alt={persona?.name || entry.speaker}
+              className="avatar"
+              onError={(e) => {
+                e.target.src = "/images/default-avatar.png";
+              }}
+            />
             <div>
-              <strong>{participant.name}:</strong>
+              <strong>{persona?.name || entry.speaker}:</strong>
               <p>{entry.message}</p>
             </div>
           </div>
         );
       })}
-      {/* Invisible div for auto-scrolling */}
-      <div ref={transcriptEndRef} />
     </div>
   );
 };
