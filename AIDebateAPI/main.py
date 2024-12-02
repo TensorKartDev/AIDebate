@@ -55,7 +55,7 @@ async def submit_turn(message: Message):
 
         # Generate response from the model
         system_prompt = persona["system_prompt"]
-        user_message = f"The topic is: {debate_topic}. Provide your response."
+        user_message = f"The topic is: {debate_topic}. Provide your response, don't give long answers keep answers short as possible."
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_message},

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 
 const Transcript = ({ history, participants, personas }) => {
   const transcriptRef = useRef(null);
@@ -26,7 +27,9 @@ const Transcript = ({ history, participants, personas }) => {
             />
             <div>
               <strong>{persona?.name || entry.speaker}:</strong>
-              <p>{entry.message}</p>
+              <ReactMarkdown className="markdown-message">
+                {entry.message}
+              </ReactMarkdown>
             </div>
           </div>
         );

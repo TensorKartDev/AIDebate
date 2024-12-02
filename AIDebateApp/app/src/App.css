@@ -565,9 +565,23 @@
 
 .transcript-entry strong {
   font-weight: bold;
+  margin-bottom: 5px;
 }
 
-.transcript-entry p {
+.markdown-message {
   margin: 0;
   white-space: pre-wrap; /* Preserve line breaks */
+}
+
+.markdown-message p {
+  margin: 0;
+  color: #333;
+}
+
+.markdown-message ul {
+  padding-left: 20px;
+}
+
+.markdown-message li {
+  margin-bottom: 5px;
 }

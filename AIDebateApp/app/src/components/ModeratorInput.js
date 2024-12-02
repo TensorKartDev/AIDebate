@@ -15,12 +15,14 @@ const ModeratorInput = ({ onSetTopic }) => {
   return (
     <form className="moderator-input" onSubmit={handleSubmit}>
       <input
-        type="text"
-        placeholder="Enter debate topic..."
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-      />
-      <button type="submit">Set Topic</button>
+          type="text"
+          placeholder="Enter debate topic..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <button type="submit">Set Topic</button>
+      
+      <div className="footer" >Powered by Spaces 2.0</div>
     </form>
   );
 };
