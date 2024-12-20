@@ -93,3 +93,4 @@ dmypy.json
 # Pylint
 .pylint.d/
 aidebate/
+*.mp3
