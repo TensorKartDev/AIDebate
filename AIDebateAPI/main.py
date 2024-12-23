@@ -46,28 +46,19 @@ class Message(BaseModel):
 # Generate TTS
 from gtts import gTTS
 from fastapi import HTTPException
+import re
 
 def generate_audio_response(text, speaker_name):
     """
-    Generates a text-to-speech audio file using gTTS, incorporating persona-specific settings.
+    Generates a text-to-speech audio file using gTTS, ensuring consistent filename sanitization.
     """
-    # Retrieve the persona settings
-    persona = personas.get(speaker_name)
-    if not persona:
-        raise HTTPException(status_code=404, detail=f"Persona '{speaker_name}' not found.")
+    # Sanitize speaker name: Replace spaces or special characters with a single underscore
+    sanitized_name = re.sub(r"[^a-zA-Z0-9]+", "_", speaker_name).strip("_")
+    file_path = f"audio_responses/{sanitized_name}_response.mp3"
     
-    # Extract persona-specific settings
-    lang = persona.get("voice_language", "en")  # Default to English
-    tld = persona.get("tld", "com")  # Default to global domain
-
+    print(f"Saving audio file at: {file_path}")  # Debugging log
     try:
-        # Generate a standardized filename
-        sanitized_name = speaker_name.replace(" ", "_").replace("-", "_")
-        file_path = f"audio_responses/{sanitized_name}_response.mp3"
-        print(f"Saving audio file at: {file_path}")  # Debug log
-
-        # Generate the audio file using gTTS with language and TLD
-        tts = gTTS(text=text, lang=lang, tld=tld)
+        tts = gTTS(text=text, lang="en")  # Adjust language as needed
         tts.save(file_path)
         return file_path
     except Exception as e:
@@ -150,13 +141,13 @@ async def participant_response():
         # Construct the system prompt
         system_prompt = (
             f"{persona['system_prompt']} "
-            f"On the topic '{debate_topic}', provide your perspective."
+            f"On the topic '{debate_topic}', provide your perspective, please be short and add humour wherever possoble and applicable."
         )
 
         # User message to guide the participant's response
         user_message = (
             f"The topic is: '{debate_topic}'. "
-            "Provide a concise and insightful response relevant to your expertise."
+            "Provide a concise and insightful response relevant to your expertise.please be short and add humour wherever possoble and applicable."
         )
 
         # Prepare the messages for the model

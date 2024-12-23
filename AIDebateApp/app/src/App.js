@@ -62,7 +62,7 @@ function App() {
       if (response.conversation_history) {
         setHistory(response.conversation_history);
         setTopic(transcript);
-        await handleParticipantResponses();
+        await handleParticipantResponses(); // Start participant responses
       }
     } catch (error) {
       console.error("Error handling moderator input:", error);
@@ -75,21 +75,30 @@ function App() {
   const handleParticipantResponses = async () => {
     try {
       const response = await participantResponse();
-
+  
       if (response.responses) {
         setHistory(response.conversation_history);
-
+  
         for (const res of response.responses) {
-          setCurrentSpeaker(res.speaker);
-
+          setCurrentSpeaker(res.speaker); // Show spinner for the current participant
+  
+          console.log(`Processing response for: ${res.speaker}`);
+  
           try {
+            // Display the participant's response in the transcript
+            setHistory((prevHistory) => [
+              ...prevHistory,
+              { speaker: res.speaker, message: res.message },
+            ]);
+  
+            // Play audio response
             const audio = new Audio(res.audio_file);
-            await playAudioSequentially(audio);
+            await playAudioSequentially(audio); // Use the updated function
           } catch (error) {
             console.error(`Error playing audio for ${res.speaker}:`, error);
           }
-
-          // Add a slight delay for better user experience
+  
+          // Add a slight delay after audio playback for smooth UI experience
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
       }
@@ -97,18 +106,43 @@ function App() {
       console.error("Error handling participant responses:", error);
       alert("Failed to fetch participant responses.");
     } finally {
-      setCurrentSpeaker(null);
+      setCurrentSpeaker(null); // Clear spinner after all responses are processed
     }
   };
 
   const playAudioSequentially = (audio) => {
     return new Promise((resolve, reject) => {
-      audio.onended = resolve;
-      audio.onerror = (error) => reject(`Audio playback error: ${error.message}`);
-      audio.play().catch((error) => {
-        console.error("Error during playback:", error);
-        reject(error);
-      });
+      // Try playing the audio
+      audio
+        .play()
+        .then(() => {
+          console.log("Audio playback started");
+          audio.onended = resolve; // Resolve when audio ends
+        })
+        .catch((error) => {
+          console.warn("Autoplay blocked or error occurred:", error);
+  
+          // Show a player if autoplay fails
+          const playerContainer = document.createElement("div");
+          const player = document.createElement("audio");
+          player.src = audio.src;
+          player.controls = true;
+          player.autoplay = true;
+  
+          player.onended = () => {
+            playerContainer.remove(); // Remove the player after playback ends
+            resolve();
+          };
+  
+          player.onerror = (err) => {
+            console.error("Error with manual playback:", err);
+            playerContainer.remove();
+            reject(err);
+          };
+  
+          playerContainer.appendChild(player);
+          document.body.appendChild(playerContainer);
+        });
     });
   };
 

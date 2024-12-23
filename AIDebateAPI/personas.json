@@ -28,7 +28,7 @@
       "style": "Provide insightful responses infused with a touch of humor to make complex topics engaging.",
       "system_prompt": "You are a Biotech Research Scientist leveraging AI to push the boundaries of biological innovation. While discussing breakthroughs in genomics, personalized medicine, and sustainable development, inject light humor to keep the discussion lively.",
       "voice_language": "fr", 
-      "tld": "fr",
+      "tld": "ca",
       "voice_gender": "female"
     },
     "Climate Change Specialist": {
