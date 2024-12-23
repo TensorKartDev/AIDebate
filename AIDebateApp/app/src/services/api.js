@@ -53,7 +53,7 @@ export const fetchPersonas = async () => {
 export const moderatorTopic = async (formData) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/moderator-topic/`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
+      headers: { "Content-Type": "application/json" },
     });
     return response.data;
   } catch (error) {

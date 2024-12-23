@@ -6,7 +6,7 @@ const Transcript = ({ history, participants, personas }) => {
 
   useEffect(() => {
     if (transcriptRef.current) {
-      // Scroll to the bottom when history updates
+      // Automatically scroll to the bottom when history updates
       transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [history]);
@@ -14,21 +14,30 @@ const Transcript = ({ history, participants, personas }) => {
   return (
     <div className="transcript" ref={transcriptRef}>
       {history.map((entry, index) => {
-        const persona = personas[entry.speaker];
+        // Fallback handling if persona is missing
+        const persona = personas[entry.speaker] || {
+          name: entry.speaker || "Unknown Speaker",
+          image: "/images/default-avatar.png",
+          description: "No description available",
+        };
+
         return (
           <div key={index} className="transcript-entry">
+            {/* Display speaker's avatar */}
             <img
-              src={persona?.image || "/images/default-avatar.png"}
-              alt={persona?.name || entry.speaker}
+              src={persona.image}
+              alt={persona.name}
               className="avatar"
               onError={(e) => {
-                e.target.src = "/images/default-avatar.png";
+                e.target.src = "/images/default-avatar.png"; // Fallback for broken image
               }}
             />
+
+            {/* Speaker's message */}
             <div>
-              <strong>{persona?.name || entry.speaker}:</strong>
+              <strong>{persona.name}:</strong>
               <ReactMarkdown className="markdown-message">
-                {entry.message}
+                {entry.message || "No message available"}
               </ReactMarkdown>
             </div>
           </div>
