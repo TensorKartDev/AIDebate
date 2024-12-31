@@ -155,8 +155,8 @@ async def submit_turn(data: Message):
     response_text = f"{data.speaker} responds: {system_prompt} on the topic '{debate_topic}'"
     conversation_history.append({"speaker": data.speaker, "message": response_text})
 
-    audio_file = generate_audio_response(response_text, data.speaker)
-    return {"conversation_history": conversation_history, "audio_file": audio_file}
+    
+    return {"conversation_history": conversation_history}
 
 
 @app.post("/participant-response/{participant_name}")

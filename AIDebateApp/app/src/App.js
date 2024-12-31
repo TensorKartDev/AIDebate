@@ -176,8 +176,8 @@ function App() {
 
         {/* Main Panel */}
         <div className="col-md-9 main-panel">
-          <h1>Interactive AI Debate</h1>
-          {topic && <h2>Debate Topic: {topic}</h2>}
+          <h1>AI Fireside Chat</h1>
+          {topic && <h2> Topic: {topic}</h2>}
           <Transcript history={history} personas={personas} />
 
           {/* Spinner Popup */}
