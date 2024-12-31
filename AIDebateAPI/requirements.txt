@@ -1,4 +1,11 @@
-fastapi
-uvicorn
 requests
 ollama
+fastapi==0.95.1
+uvicorn==0.22.0
+python-multipart==0.0.5
+pydantic==1.10.7
+requests==2.31.0
+pyttsx3==2.90
+pydub==0.25.1
+openai-whisper==20230314
+ffmpeg-python==0.2.0

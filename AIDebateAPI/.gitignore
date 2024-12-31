@@ -2,7 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-
+.code-workspace
 # Virtual environments
 .venv/
 env/
@@ -93,3 +93,4 @@ dmypy.json
 # Pylint
 .pylint.d/
 aidebate/
+*.mp3

@@ -1,35 +1,48 @@
 import React, { useEffect, useRef } from "react";
+import ReactMarkdown from "react-markdown";
 
-const Transcript = ({ history, participants }) => {
-  const transcriptEndRef = useRef(null); // Reference to the end of the transcript
+const Transcript = ({ history, participants, personas }) => {
+  const transcriptRef = useRef(null);
 
-  // Scroll to the last message when history updates
   useEffect(() => {
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
+    if (transcriptRef.current) {
+      // Automatically scroll to the bottom when history updates
+      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
     }
   }, [history]);
 
   return (
-    <div className="transcript">
+    <div className="transcript" ref={transcriptRef}>
       {history.map((entry, index) => {
-        const participant = participants.find((p) => p.name === entry.speaker) || {
-          name: entry.speaker,
+        // Fallback handling if persona is missing
+        const persona = personas[entry.speaker] || {
+          name: entry.speaker || "Unknown Speaker",
           image: "/images/default-avatar.png",
+          description: "No description available",
         };
 
         return (
           <div key={index} className="transcript-entry">
-            <img src={participant.image} alt={participant.name} className="avatar" />
+            {/* Display speaker's avatar */}
+            <img
+              src={persona.image}
+              alt={persona.name}
+              className="avatar"
+              onError={(e) => {
+                e.target.src = "/images/default-avatar.png"; // Fallback for broken image
+              }}
+            />
+
+            {/* Speaker's message */}
             <div>
-              <strong>{participant.name}:</strong>
-              <p>{entry.message}</p>
+              <strong>{persona.name}:</strong>
+              <ReactMarkdown className="markdown-message">
+                {entry.message || "No message available"}
+              </ReactMarkdown>
             </div>
           </div>
         );
       })}
-      {/* Invisible div for auto-scrolling */}
-      <div ref={transcriptEndRef} />
     </div>
   );
 };

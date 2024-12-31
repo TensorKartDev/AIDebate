@@ -1,142 +1,205 @@
-from fastapi import FastAPI, BackgroundTasks
+import os
+import json
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from collections import deque
 from typing import List, Dict
 from fastapi.middleware.cors import CORSMiddleware
-from services.persona import personas  # Assume personas are defined in services.persona
-import requests
-import json
-
+from gtts import gTTS
+from fastapi.responses import FileResponse
+import logging
+import re
+from services.llm import speak
+import pyttsx3
 # Initialize FastAPI app
 app = FastAPI()
 
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Replace "*" with specific origins in production
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Participants queue
-participants = deque(["WizardLM2", "LLaMA3", "LLaMA2", "Mistral"])
+# Logging configuration
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Conversation history and topic
+# Load personas
+persona_file_path = os.path.join(os.path.dirname(__file__), "personas.json")
+if not os.path.exists(persona_file_path):
+    raise FileNotFoundError("personas.json file not found.")
+with open(persona_file_path, "r") as file:
+    personas = json.load(file)
+
+# Globals
+participants = deque(personas.keys())
 conversation_history: List[Dict] = []
 debate_topic: str = ""
-stop_flag: bool = False
+
+# Ensure directories exist
+os.makedirs("audio_responses", exist_ok=True)
 
 # Request schema
 class Message(BaseModel):
     speaker: str
-    message: str
     topic: str = ""
+    message: str = ""
+
+# def generate_audio_response(text, speaker_name):
+#     """
+#     Generate an audio file from text using pyttsx3 with persona-based voice properties.
+#     """
+#     try:
+#         # Fetch persona details
+#         persona = personas.get(speaker_name)
+#         if not persona:
+#             raise ValueError(f"Persona '{speaker_name}' not found.")
+
+#         # Extract voice properties
+#         voice_language = persona.get("voice_language", "en")
+#         voice_gender = persona.get("voice_gender", "male")
+
+#         # Initialize pyttsx3 engine
+#         engine = pyttsx3.init()
+
+#         # Set voice properties
+#         voices = engine.getProperty('voices')
+#         selected_voice = None
+#         for voice in voices:
+#             if voice_language in voice.languages and voice_gender in voice.name.lower():
+#                 selected_voice = voice.id
+#                 break
+
+#         if selected_voice:
+#             engine.setProperty('voice', selected_voice)
+#         else:
+#             print(f"No matching voice found for language '{voice_language}' and gender '{voice_gender}'. Using default voice.")
+
+#         # Set additional properties
+#         engine.setProperty('rate', 150)  # Adjust speed if needed
+#         engine.setProperty('volume', 0.9)  # Adjust volume if needed
+
+#         # Save the audio file
+#         sanitized_name = speaker_name.replace(" ", "_")
+#         file_path = f"audio_responses/{sanitized_name}_response.mp3"
+#         os.makedirs("audio_responses", exist_ok=True)
+#         engine.save_to_file(text, file_path)
+#         engine.runAndWait()
+
+#         print(f"Audio file generated at {file_path}")
+#         return file_path
+#     except Exception as e:
+#         raise Exception(f"Error generating audio with pyttsx3: {str(e)}")
+
+# def generate_audio_response(text, speaker_name):
+#     """
+#     Generates a text-to-speech audio file using gTTS, ensuring consistent filename sanitization.
+#     """
+#     sanitized_name = re.sub(r"[^a-zA-Z0-9]+", "_", speaker_name).strip("_")
+#     file_path = f"audio_responses/{sanitized_name}_response.mp3"
+    
+#     logging.debug(f"Saving audio file at: {file_path}")
+#     try:
+#         print("generating audio response of ", text)
+#         tts = gTTS(text=text, lang="en")
+#         tts.save(file_path)
+#         return file_path, ipd.Audio(file_path)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error generating TTS: {str(e)}")
+
+
+@app.get("/personas/")
+async def get_personas():
+    """
+    Fetch predefined personas from the `personas.json` file.
+    """
+    return personas
+
+
+@app.post("/moderator-topic/")
+async def moderator_topic(data: Message):
+    """
+    Sets the debate topic and prepares it for participant responses.
+    """
+    global debate_topic, conversation_history
+
+    if not data.topic:
+        raise HTTPException(status_code=400, detail="No topic provided")
+
+    # Update the debate topic and conversation history
+    debate_topic = data.topic
+    conversation_history.append({
+        "speaker": "Moderator",
+        "message": f"Debate Topic: {debate_topic}"
+    })
+
+    return {"conversation_history": conversation_history}
+
 
 @app.post("/submit-turn/")
-async def submit_turn(message: Message):
+async def submit_turn(data: Message):
     """
-    Handles a single turn in the debate.
+    Handles responses from participants during the debate.
     """
-    global conversation_history, debate_topic
+    global conversation_history
+    if not data.speaker:
+        raise HTTPException(status_code=400, detail="No speaker specified")
 
-    # Handle moderator setting the topic
-    if message.topic:
-        if debate_topic != message.topic:
-            debate_topic = message.topic
-            conversation_history.append({"speaker": "Moderator", "message": f"Debate Topic: {debate_topic}"})
-        return {"conversation_history": conversation_history}
+    persona = personas.get(data.speaker)
+    if not persona:
+        raise HTTPException(status_code=404, detail=f"Speaker '{data.speaker}' not found.")
 
-    # Handle model responses
-    if message.speaker:
-        persona = personas.get(message.speaker)
-        if not persona:
-            return {"error": f"Speaker {message.speaker} not found."}
+    system_prompt = persona["system_prompt"]
+    response_text = f"{data.speaker} responds: {system_prompt} on the topic '{debate_topic}'"
+    conversation_history.append({"speaker": data.speaker, "message": response_text})
 
-        # Generate response from the model
-        try:
-            system_prompt = persona["system_prompt"]
-            user_message = f"The topic is: {debate_topic}. Provide your response."
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ]
-            print("calling speak from submit-turn")
-            response = speak(messages, persona["model_name"])
-            # Add response to conversation history
-            conversation_history.append({"speaker": persona["name"], "message": response["content"]})
-        except Exception as e:
-            return {"error": f"Failed to generate response: {str(e)}"}
+    audio_file = generate_audio_response(response_text, data.speaker)
+    return {"conversation_history": conversation_history, "audio_file": audio_file}
 
-        return {"conversation_history": conversation_history[-1:]}  # Only return the latest message
 
-    return {"error": "Invalid request"}
-
-async def run_debate(topic: str):
+@app.post("/participant-response/{participant_name}")
+async def participant_response(participant_name: str):
     """
-    Manages the debate flow and ensures sequential responses from participants.
+    Generates a response for a specific participant based on the current debate topic.
+    This is called for each participant one by one.
     """
-    global participants, conversation_history, stop_flag
-    for _ in range(len(participants)):
-        if stop_flag:
-            break  # Stop if moderator interrupts
+    global debate_topic, conversation_history
+    responses = []
 
-        current_speaker = participants[0]
-        persona = personas.get(current_speaker)
+    if not debate_topic:
+        raise HTTPException(status_code=400, detail="Debate topic is not set.")
 
-        if not persona:
-            conversation_history.append({"speaker": "System", "message": f"Speaker {current_speaker} not found."})
-            participants.rotate(-1)
-            continue
+    persona = personas.get(participant_name)
+    if not persona:
+        raise HTTPException(status_code=404, detail=f"Participant '{participant_name}' not found.")
 
-        # Prepare system and user messages
+    system_prompt = f"{persona['system_prompt']} On the topic '{debate_topic}', provide your perspective."
+    user_message = f"The topic is: '{debate_topic}'. Provide a concise, short and insightful response."
 
-        system_prompt = persona["system_prompt"]
-        
-        user_message = f"The topic is: {topic}. Provide your response, stick to the tone and language, pay most attention to the last 5 conversations and respond accordingly"
-       
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                   f"{system_prompt}"
-                )
-            },
-            {
-                "role": "user",
-                "content": (
-                    f"### Here is the conversation history:\n{conversation_history}\n\n {user_message}"
-                    
-                )
-            }
-        ]
-        # Generate response using the persona's model
-        try:
-            print("calling speak from run_debate ",persona["model_name"] )
-            response = speak(messages, persona["model_name"])
-            conversation_history.append({"speaker": persona["name"], "message": response["content"]})
-        except Exception as e:
-            conversation_history.append({"speaker": "System", "message": f"Error generating response for {persona['name']}: {e}"})
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_message},
+    ]
 
-        # Rotate to the next participant
-        participants.rotate(-1)
-
-def speak(messages, model):
-    """
-    Sends messages to the specified model and retrieves the response.
-    """
     try:
-        r = requests.post(
-            "http://127.0.0.1:11434/api/chat",
-            json={"model": model, "messages": messages, "stream": False}
-        )
-        r.raise_for_status()
-        response = r.json()
-        if "error" in response:
-            raise Exception(response["error"])
-        return response.get("message", {})
+        response = speak(messages, persona["model_name"])
+        generated_message = response.get("content", "")
+        conversation_history.append({"speaker": participant_name, "message": generated_message})
+        responses.append({
+            "speaker": participant_name,
+            "message": generated_message,
+        })
+
     except Exception as e:
-        raise Exception(f"Error communicating with model {model}: {str(e)}")
+        conversation_history.append({
+            "speaker": "System",
+            "message": f"Error generating response for {participant_name}: {str(e)}"
+        })
+
+    return {"conversation_history": conversation_history, "responses": responses}
+
 
 @app.get("/history/")
 async def get_history():
@@ -144,3 +207,13 @@ async def get_history():
     Returns the conversation history.
     """
     return {"conversation_history": conversation_history}
+
+
+@app.get("/audio/{speaker_name}")
+async def get_audio(speaker_name: str):
+    print(speaker_name)
+    #sanitized_name = re.sub(r"[^a-zA-Z0-9]+", "_", speaker_name).strip("_")
+    file_path = f"audio_responses/{speaker_name}_response.mp3"
+    if os.path.exists(file_path):
+        return FileResponse(file_path, media_type="audio/mpeg")
+    raise HTTPException(status_code=404, detail="Audio file not found")
