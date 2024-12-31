@@ -63,12 +63,18 @@ export const moderatorTopic = async (formData) => {
 };
 
 // Fetch participant responses
-export const participantResponse = async () => {
+export const participantResponse = async (participantName, formData) => {
   try {
-    const response = await axios.post(`${API_BASE_URL}/participant-response/`);
+    const response = await axios.post(
+      `${API_BASE_URL}/participant-response/${participantName}`,
+      formData,
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
     return response.data;
   } catch (error) {
-    console.error("Error fetching participant responses:", error);
+    console.error(`Error fetching response for participant ${participantName}:`, error);
     throw error;
   }
 };

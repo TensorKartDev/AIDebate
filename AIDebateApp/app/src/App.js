@@ -62,7 +62,7 @@ function App() {
       if (response.conversation_history) {
         setHistory(response.conversation_history);
         setTopic(transcript);
-        await handleParticipantResponses(); // Start participant responses
+        await handleParticipantResponses(Object.keys(personas)); // Start participant responses
       }
     } catch (error) {
       console.error("Error handling moderator input:", error);
@@ -72,34 +72,38 @@ function App() {
     }
   };
 
-  const handleParticipantResponses = async () => {
+  const handleParticipantResponses = async (participants) => {
     try {
-      const response = await participantResponse();
+      for (const participant of participants) {
+        setCurrentSpeaker(participant);
+        try {
+          const formData = { topic }; // Use topic to send with API
+          const response = await participantResponse(participant, formData);
   
-      if (response.responses) {
-        setHistory(response.conversation_history);
+          if (response.responses && response.responses.length > 0) {
+            const { speaker, message } = response.responses[0];
+            setHistory((prevHistory) => [...prevHistory, { speaker, message }]); // Update transcript
   
-        for (const res of response.responses) {
-          setCurrentSpeaker(res.speaker); // Show spinner for the current participant
-  
-          console.log(`Processing response for: ${res.speaker}`);
-  
-          try {
-            // Display the participant's response in the transcript
-            setHistory((prevHistory) => [
-              ...prevHistory,
-              { speaker: res.speaker, message: res.message },
-            ]);
-  
-            // Play audio response
-            const audio = new Audio(res.audio_file);
-            await playAudioSequentially(audio); // Use the updated function
-          } catch (error) {
-            console.error(`Error playing audio for ${res.speaker}:`, error);
+            // Use voice_language from personas to select the appropriate voice
+          const voiceLanguage = personas[speaker]?.voice_language || "en-US";
+          console.log("persona voicez",voiceLanguage)
+          const voices = speechSynthesis.getVoices();
+          console.log(voices)
+          const selectedVoice = voices.find((v) => v.voiceURI === voiceLanguage);
+
+          const utterance = new SpeechSynthesisUtterance(message);
+          if (selectedVoice) {
+            utterance.voice = selectedVoice; // Assign the selected voice
+          } else {
+            console.warn(`Voice for language "${voiceLanguage}" not found, using default.`);
           }
+          speechSynthesis.speak(utterance);
   
-          // Add a slight delay after audio playback for smooth UI experience
-          await new Promise((resolve) => setTimeout(resolve, 500));
+            // Delay between participants
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
+        } catch (error) {
+          console.error(`Error fetching response for ${participant}:`, error);
         }
       }
     } catch (error) {
@@ -110,9 +114,8 @@ function App() {
     }
   };
 
-  const playAudioSequentially = (audio) => {
+  const playAudio = (audio) => {
     return new Promise((resolve, reject) => {
-      // Try playing the audio
       audio
         .play()
         .then(() => {
@@ -122,7 +125,7 @@ function App() {
         .catch((error) => {
           console.warn("Autoplay blocked or error occurred:", error);
   
-          // Show a player if autoplay fails
+          // Show a manual player as a fallback
           const playerContainer = document.createElement("div");
           const player = document.createElement("audio");
           player.src = audio.src;
