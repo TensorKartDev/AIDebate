@@ -1,51 +1,52 @@
 import React, { useState, useEffect } from "react";
 
-function App() {
+function VoiceTester() {
   const [voices, setVoices] = useState([]);
   const [testText, setTestText] = useState("This is a voice test.");
   const [currentVoice, setCurrentVoice] = useState(null);
-  const [currentUtterance, setCurrentUtterance] = useState(null);
 
   useEffect(() => {
     const loadVoices = () => {
-      const availableVoices = speechSynthesis.getVoices();
-      if (availableVoices.length > 0) {
-        setVoices(availableVoices);
-      } else {
-        console.error("No voices available. Ensure your browser supports SpeechSynthesis.");
-      }
+      const availableVoices = window.speechSynthesis.getVoices();
+      console.log("Loaded voices:", availableVoices);
+      setVoices(availableVoices);
     };
 
-    if (speechSynthesis.onvoiceschanged !== undefined) {
-      speechSynthesis.onvoiceschanged = loadVoices;
-    } else {
-      loadVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices;
     }
+
+    loadVoices(); // Call directly in case voices are already loaded
   }, []);
 
   const playVoice = (voice) => {
-    stopVoice(); // Stop any currently playing voice before starting a new one
+    // Stop any currently playing voice
+    window.speechSynthesis.cancel();
+
+    // Create a new utterance
     const utterance = new SpeechSynthesisUtterance(testText);
     utterance.voice = voice;
 
-    utterance.onstart = () => {
-      setCurrentVoice(voice.name); // Highlight the playing voice
-    };
+    // Track the currently playing voice
+    setCurrentVoice(voice.name);
 
     utterance.onend = () => {
-      setCurrentVoice(null); // Remove highlight after playback
+      setCurrentVoice(null);
     };
 
-    speechSynthesis.speak(utterance);
-    setCurrentUtterance(utterance);
+    utterance.onerror = () => {
+      console.error("Error during voice playback:", voice.name);
+      setCurrentVoice(null);
+    };
+
+    // Speak the text
+    window.speechSynthesis.speak(utterance);
   };
 
   const stopVoice = () => {
-    if (currentUtterance) {
-      speechSynthesis.cancel(); // Stop current speech synthesis
-      setCurrentVoice(null); // Remove highlight
-      setCurrentUtterance(null); // Clear current utterance
-    }
+    // Cancel all ongoing speech
+    window.speechSynthesis.cancel();
+    setCurrentVoice(null);
   };
 
   return (
@@ -57,52 +58,49 @@ function App() {
         rows="3"
         cols="50"
         placeholder="Enter test text here..."
-        style={{ width: "100%", marginBottom: "20px", padding: "10px" }}
+        style={{ width: "100%", marginBottom: "10px" }}
       />
       <h2>Available Voices</h2>
-      {voices.length === 0 ? (
-        <p>No voices available. Please check your browser settings.</p>
-      ) : (
+      {voices.length > 0 ? (
         <ul style={{ listStyleType: "none", padding: 0 }}>
           {voices.map((voice, index) => (
             <li
               key={index}
               style={{
-                marginBottom: "15px",
+                marginBottom: "10px",
                 padding: "10px",
-                border: "1px solid #ccc",
+                border: "1px solid #ddd",
                 borderRadius: "5px",
-                backgroundColor:
-                  currentVoice === voice.name ? "#e0f7fa" : "#ffffff",
+                background: currentVoice === voice.name ? "#f0f8ff" : "#fff",
               }}
             >
               <strong>{voice.name}</strong> ({voice.lang}){" "}
               {voice.default && <span style={{ color: "green" }}>Default</span>}
-              <div style={{ marginTop: "10px" }}>
+              <div style={{ marginTop: "5px" }}>
                 <button
                   onClick={() => playVoice(voice)}
                   style={{
+                    padding: "5px 10px",
                     marginRight: "10px",
-                    padding: "5px 15px",
-                    backgroundColor: "#007BFF",
+                    background: "#007BFF",
                     color: "white",
                     border: "none",
                     cursor: "pointer",
-                    borderRadius: "3px",
                   }}
+                  disabled={currentVoice === voice.name}
                 >
                   Play
                 </button>
                 <button
                   onClick={stopVoice}
                   style={{
-                    padding: "5px 15px",
-                    backgroundColor: "#FF3B3F",
+                    padding: "5px 10px",
+                    background: "#FF4136",
                     color: "white",
                     border: "none",
                     cursor: "pointer",
-                    borderRadius: "3px",
                   }}
+                  disabled={currentVoice !== voice.name}
                 >
                   Stop
                 </button>
@@ -110,9 +108,11 @@ function App() {
             </li>
           ))}
         </ul>
+      ) : (
+        <p>No voices available. Please check your browser settings.</p>
       )}
     </div>
   );
 }
 
-export default App;
+export default VoiceTester;
