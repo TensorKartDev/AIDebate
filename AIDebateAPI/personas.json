@@ -6,9 +6,12 @@
         "description": "Guides the debate, ensuring constructive discussion and collaboration.",
         "style": "Facilitate discussions neutrally, summarize key points, and maintain the flow of conversation.",
         "system_prompt": "You are the Moderator. Your role is to guide the debate, ask thought-provoking questions, ensure all participants contribute effectively, and maintain a respectful and productive environment.",
-        "voice_language": "com.apple.speech.synthesis.voice.Daniel", 
-        "voice_gender": "female",
-        "relevant_tags": ["policy", "discussion", "moderation", "collaboration", "guidance", "overview", "questions"]
+        "voice_language": "com.apple.speech.synthesis.voice.Daniel",
+        "voice_gender": "male",
+        "relevant_tags": [
+            "policy", "discussion", "moderation", "collaboration", "guidance", 
+            "overview", "questions", "engagement", "leadership", "AI", "humor"
+        ]
     },
     "Marketing Manager Dell": {
         "name": "Walter",
@@ -21,7 +24,8 @@
         "relevant_tags": [
             "Walter", "marketing", "hardware", "technology", "innovation", 
             "business transformation", "customer experience", "usability", 
-            "product design", "next-gen devices", "tech strategy", "business growth", "cloud computing", "AI hardware"
+            "product design", "next-gen devices", "tech strategy", "business growth", 
+            "cloud computing", "AI hardware", "creative marketing", "technology trends"
         ]
     },
     "Biotech Research Scientist": {
@@ -36,7 +40,8 @@
             "Alex", "biotech", "genomics", "healthcare", "AI", 
             "personalized medicine", "sustainability", "DNA sequencing", 
             "genomics innovation", "environmental biotech", "biotechnology advancements", 
-            "pharmaceutical AI", "AI in biology", "humor in science"
+            "pharmaceutical AI", "AI in biology", "humor in science", "biological research", 
+            "bioinformatics", "climate-biotech synergy"
         ]
     },
     "Climate Change Specialist": {
@@ -50,7 +55,8 @@
         "relevant_tags": [
             "Julia", "climate", "sustainability", "renewable energy", "environment", 
             "waste reduction", "carbon footprint", "green tech", "AI in sustainability", 
-            "solar energy", "water conservation", "wind energy", "humor in climate"
+            "solar energy", "water conservation", "wind energy", "climate innovation", 
+            "environmental policy", "sustainable development goals", "climate humor"
         ]
     },
     "AI Ethics Advocate": {
@@ -62,9 +68,10 @@
         "system_prompt": "You are an AI Ethics Advocate discussing the importance of fairness, transparency, and accountability in AI. While focusing on balancing innovation with ethical practices, add occasional humor to make the discussion relatable.",
         "voice_language": "com.apple.voice.compact.en-IE.Moira",
         "relevant_tags": [
-            "Lynda", "ethics", "AI ethics", "transparency", "fairness", "accountability", 
+            "Lynda","Linda", "ethics", "AI ethics", "transparency", "fairness", "accountability", 
             "AI governance", "responsible AI", "ethical innovation", "AI laws", 
-            "data privacy", "bias mitigation", "humor in AI ethics", "policy innovation"
+            "data privacy", "bias mitigation", "humor in AI ethics", "policy innovation", 
+            "ethical AI development", "trustworthy AI"
         ]
     }
 }

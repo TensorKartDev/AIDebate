@@ -104,7 +104,6 @@ async def process_message(queue_name, message):
 
     logging.info(f"Message received in {queue_name}: {message}")
 
-    # Handle the context queue case
     if queue_name == "context_queue":
         logging.info("Processing the final queue: context_queue")
         for connection in list(client_connections):
@@ -125,23 +124,41 @@ async def process_message(queue_name, message):
         is_tag_match = any(tag.lower() in (t.lower() for t in agent_tags) for tag in tags)
         logging.info(f"{agent_name} relevant tags: {agent_tags}, Tag match: {is_tag_match}")
 
-        # Reusable prompts
-        system_prompt = (
-            f"{persona['system_prompt']} You're participating in a lively fireside chat at a tech conference. "
-            f"The topic is '{content}'. Your response should be insightful, humorous, and concise, leaving the audience both entertained and thoughtful. "
-            f"Aim to weave in relatable analogies or clever observations while staying relevant to the topic."
-        )
-
-        user_message = (
-            f"Let's explore the topic: '{content}'. "
-            f"Craft a very short 2-liner response that is smart, witty, and infused with light humor. "
-            f"Engage the audience with relatable examples, keeping the tone conversational and fun."
-        )
-
-        # Process if tags match or not
         if is_tag_match:
+            # Get the last participant's response for context
+            last_message = None
+            if conversation_history and conversation_history[-1]["speaker"] != "Moderator":
+                last_message = conversation_history[-1]["message"]
+
+            system_prompt = (
+                    f"Your role is to guide the conversation. Let's discuss: \"{content}\". "
+                    f"Please ensure your tone is neutral."
+                )
+
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        f"Let's explore the topic: '{content}'. "
+                        f"Craft a very short response that is smart, witty, and infused with light humor. "
+                        f"Relate to what was previously said if relevant."
+                    ),
+                },
+            ]
+
             try:
-                _generate_and_publish_response(persona, system_prompt, user_message, agent_name)
+                response = speak(messages, persona["model_name"])
+                generated_message = response.get("content", "No response generated.")
+                logging.info(f"{agent_name} response generated: {generated_message}")
+
+                # Update conversation history
+                conversation_history.append({"speaker": agent_name, "message": generated_message})
+
+                rabbitmq_manager.publish_message_to_queue(
+                    "context_queue",
+                    json.dumps({"speaker": agent_name, "message": generated_message})
+                )
             except Exception as e:
                 logging.error(f"Error generating response for {agent_name}: {e}")
         else:
@@ -158,7 +175,7 @@ def _generate_and_publish_response(persona, system_prompt, user_message, agent_n
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_message},
     ]
-    
+
 
     response = speak(messages, persona["model_name"])
     generated_message = response.get("content", "No response generated.")

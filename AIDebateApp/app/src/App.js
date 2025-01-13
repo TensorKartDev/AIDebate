@@ -189,7 +189,6 @@ function App() {
       {/* Bottom Panel: Participants */}
       <div className="bottom-panel bg-light border-top w-100">
         <div className="d-flex align-items-center justify-content-between px-3 py-2">
-          <h4>Participants</h4>
           <AiOutlineAudio
             className={`start-listening-icon ${isListening ? "active" : ""}`}
             size={40}

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
+import { AiOutlineAudio } from "react-icons/ai";
 
-const Transcript = ({ history, personas, highlightedTextId }) => {
+const Transcript = ({ history, personas, highlightedTextId, speakMessage }) => {
   const transcriptRef = useRef(null);
 
   useEffect(() => {
@@ -57,6 +58,17 @@ const Transcript = ({ history, personas, highlightedTextId }) => {
               <ReactMarkdown className="markdown-message">
                 {entry.message || "No message available"}
               </ReactMarkdown>
+            </div>
+
+            {/* Speaker Button */}
+            <div className="hear-again-button-container">
+              <button
+                className="hear-again-button"
+                onClick={() => speakMessage(entry.message, entry.speaker, index)}
+                title="Hear Again"
+              >
+                <AiOutlineAudio size={20} />
+              </button>
             </div>
           </div>
         );
