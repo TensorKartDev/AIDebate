@@ -1,13 +1,16 @@
 import React, { useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 
-const Transcript = ({ history, participants, personas }) => {
+const Transcript = ({ history, personas, highlightedTextId }) => {
   const transcriptRef = useRef(null);
 
   useEffect(() => {
     if (transcriptRef.current) {
-      // Automatically scroll to the bottom when history updates
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+      // Smooth scroll to the bottom when history updates
+      transcriptRef.current.scrollTo({
+        top: transcriptRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [history]);
 
@@ -22,20 +25,35 @@ const Transcript = ({ history, participants, personas }) => {
         };
 
         return (
-          <div key={index} className="transcript-entry">
-            {/* Display speaker's avatar */}
-            <img
-              src={persona.image}
-              alt={persona.name}
-              className="avatar"
-              onError={(e) => {
-                e.target.src = "/images/default-avatar.png"; // Fallback for broken image
-              }}
-            />
+          <div
+            key={index}
+            className={`transcript-entry ${
+              highlightedTextId === index ? "highlighted-text" : ""
+            }`}
+          >
+            {/* Speaker's Avatar */}
+            <div className="avatar-container">
+              <img
+                src={persona.image}
+                alt={persona.name}
+                className="avatar"
+                onError={(e) => {
+                  e.target.src = "/images/default-avatar.png"; // Fallback for broken image
+                }}
+              />
+            </div>
 
-            {/* Speaker's message */}
-            <div>
-              <strong>{persona.name}:</strong>
+            {/* Speaker's Message */}
+            <div className="message-container">
+              <div className="message-header">
+                <strong>{persona.name}</strong>
+                <span className="message-timestamp">
+                  {new Date(entry.timestamp || Date.now()).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
               <ReactMarkdown className="markdown-message">
                 {entry.message || "No message available"}
               </ReactMarkdown>

@@ -10,11 +10,13 @@ function App() {
   const [history, setHistory] = useState([]);
   const [isListening, setIsListening] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeSpeaker, setActiveSpeaker] = useState(null);
+  const [highlightedTextId, setHighlightedTextId] = useState(null);
   const wsRef = useRef(null);
-  const speechQueue = []; // Queue for pending speech messages
-  let isSpeaking = false;
+  const speechQueue = useRef([]);
+  const isSpeakingRef = useRef(false);
 
-  const speakMessage = (message, speaker) => {
+  const speakMessage = (message, speaker, index) => {
     if (speaker === "Moderator") {
       console.log("Skipping reading aloud for Moderator.");
       return;
@@ -25,22 +27,26 @@ function App() {
       return;
     }
 
-    speechQueue.push({ message, speaker });
+    // Add the message to the speech queue
+    speechQueue.current.push({ message, speaker, index });
     processSpeechQueue();
   };
 
   const processSpeechQueue = () => {
-    if (isSpeaking || speechQueue.length === 0) return;
+    if (isSpeakingRef.current || speechQueue.current.length === 0) return;
 
-    const { message, speaker } = speechQueue.shift(); // Get the next message
-    isSpeaking = true;
+    const { message, speaker, index } = speechQueue.current.shift();
+    isSpeakingRef.current = true;
+
+    setActiveSpeaker(speaker);
+    setHighlightedTextId(index);
 
     const utterance = new SpeechSynthesisUtterance(message);
     const voices = speechSynthesis.getVoices();
     const selectedVoice = voices.find(
       (v) => v.voiceURI === personas[speaker]?.voice_language
     );
-    console.log(selectedVoice)
+
     if (selectedVoice) {
       utterance.voice = selectedVoice;
       console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
@@ -50,26 +56,28 @@ function App() {
       );
     }
 
-    utterance.pitch = personas[speaker]?.pitch || 1; // Optional pitch customization
-    utterance.rate = personas[speaker]?.rate || 1;   // Optional rate customization
+    utterance.pitch = personas[speaker]?.pitch || 1;
+    utterance.rate = personas[speaker]?.rate || 1;
 
     utterance.onend = () => {
-      isSpeaking = false;
-      processSpeechQueue(); // Process the next message
+      isSpeakingRef.current = false;
+      setActiveSpeaker(null);
+      setHighlightedTextId(null);
+      processSpeechQueue(); // Process the next item in the queue
     };
 
     utterance.onerror = (error) => {
       console.error("Speech synthesis error:", error);
-      isSpeaking = false;
-      processSpeechQueue(); // Process the next message
+      isSpeakingRef.current = false;
+      setActiveSpeaker(null);
+      setHighlightedTextId(null);
+      processSpeechQueue(); // Process the next item in the queue
     };
 
-    speechSynthesis.cancel(); // Stop any ongoing speech
     speechSynthesis.speak(utterance);
   };
 
   useEffect(() => {
-    // Load personas on component mount
     const loadPersonas = async () => {
       try {
         const data = await fetchPersonas();
@@ -80,7 +88,6 @@ function App() {
     };
     loadPersonas();
 
-    // Establish WebSocket connection
     if (!wsRef.current) {
       wsRef.current = new WebSocket("ws://localhost:1000/ws");
 
@@ -92,9 +99,9 @@ function App() {
           console.log("WebSocket message received:", data);
           setHistory((prev) => [...prev, data]);
           if (data.speaker !== "Moderator") {
-            speakMessage(data.message, data.speaker);
+            speakMessage(data.message, data.speaker, history.length);
           }
-          setIsLoading(false); // Stop spinner when a response is received
+          setIsLoading(false);
         } catch (e) {
           console.error("Failed to process WebSocket message:", e);
           alert("An error occurred while processing a message.");
@@ -114,14 +121,13 @@ function App() {
       };
     }
 
-    // Cleanup WebSocket on component unmount
     return () => {
       if (wsRef.current) {
         wsRef.current.close(1000, "Component unmounting");
         wsRef.current = null;
       }
     };
-  }, []);
+  }, [history]);
 
   const startListening = () => {
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -130,18 +136,19 @@ function App() {
     recognition.maxAlternatives = 1;
 
     setIsListening(true);
+    setActiveSpeaker("Moderator");
 
     recognition.onresult = async (event) => {
       const transcript = event.results[0][0].transcript;
       setIsListening(false);
       recognition.stop();
+      setActiveSpeaker(null);
 
-      // Send the transcript via WebSocket
       if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
         const messagePayload = { speaker: "Moderator", message: transcript };
         console.log("Sending transcript to WebSocket:", messagePayload);
         wsRef.current.send(JSON.stringify(messagePayload));
-        setIsLoading(true); // Start spinner after sending
+        setIsLoading(true);
       } else {
         console.error("WebSocket is not open. Unable to send transcript.");
       }
@@ -159,59 +166,62 @@ function App() {
 
     recognition.onend = () => {
       setIsListening(false);
+      setActiveSpeaker(null);
     };
 
     recognition.start();
   };
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        {/* Left Panel: Participants */}
-        <div className="col-md-3 left-panel">
-          <h2>Participants</h2>
+    <div className="container-fluid d-flex flex-column vh-100">
+      {/* Main Panel */}
+      <div className="flex-grow-1 overflow-auto">
+        <h1 className="text-center">AI Fireside Chat</h1>
+        <div className="scrollable-transcript">
+          <Transcript
+            history={history}
+            personas={personas}
+            highlightedTextId={highlightedTextId}
+          />
+        </div>
+      </div>
+
+      {/* Bottom Panel: Participants */}
+      <div className="bottom-panel bg-light border-top w-100">
+        <div className="d-flex align-items-center justify-content-between px-3 py-2">
+          <h4>Participants</h4>
+          <AiOutlineAudio
+            className={`start-listening-icon ${isListening ? "active" : ""}`}
+            size={40}
+            onClick={startListening}
+            title="Start Listening"
+          />
+        </div>
+        <div className="participants-list d-flex flex-wrap overflow-auto px-3 py-2">
           {Object.keys(personas).length > 0 ? (
-            <ul>
-              {Object.keys(personas).map((participant) => (
-                <li key={participant}>
-                  <img
-                    src={personas[participant]?.image || "/images/default-avatar.png"}
-                    alt={personas[participant]?.name || participant}
-                    className="avatar"
-                  />
-                  <strong>{personas[participant]?.name || participant}</strong>
-                  <p>{personas[participant]?.description || "No description available"}</p>
-                </li>
-              ))}
-            </ul>
+            Object.keys(personas).map((participant) => (
+              <div
+                key={participant}
+                className={`participant-card ${
+                  participant === activeSpeaker ? "highlight" : ""
+                } ${
+                  isListening && participant === "Moderator" ? "highlight" : ""
+                }`}
+              >
+                <img
+                  src={personas[participant]?.image || "/images/default-avatar.png"}
+                  alt={personas[participant]?.name || participant}
+                  className="avatar mb-2"
+                />
+                <strong>{personas[participant]?.name || participant}</strong>
+                <p className="small text-muted">
+                  {personas[participant]?.description || "No description available"}
+                </p>
+              </div>
+            ))
           ) : (
             <p>Loading participants...</p>
           )}
-        </div>
-
-        {/* Main Panel */}
-        <div className="col-md-9 main-panel">
-          <h1>AI Fireside Chat</h1>
-          <Transcript history={history} personas={personas} />
-
-          {/* Moderator Input Section */}
-          <div className="moderator-input">
-            {isListening || isLoading ? (
-              <div className="listening-loader">
-                <p>{isListening ? "Listening..." : "Waiting for response..."}</p>
-                <div className="spinner-border text-primary" role="status">
-                  <span className="visually-hidden">Loading...</span>
-                </div>
-              </div>
-            ) : (
-              <AiOutlineAudio
-                className="start-listening-icon"
-                size={50}
-                onClick={startListening}
-                title="Start Listening"
-              />
-            )}
-          </div>
         </div>
       </div>
     </div>
