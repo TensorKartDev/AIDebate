@@ -9,21 +9,38 @@ function App() {
   const [personas, setPersonas] = useState({});
   const [history, setHistory] = useState([]);
   const [isListening, setIsListening] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const wsRef = useRef(null);
+  const speechQueue = []; // Queue for pending speech messages
+  let isSpeaking = false;
+
   const speakMessage = (message, speaker) => {
+    if (speaker === "Moderator") {
+      console.log("Skipping reading aloud for Moderator.");
+      return;
+    }
+
     if (!("speechSynthesis" in window)) {
       console.error("Text-to-speech is not supported in this browser.");
       return;
     }
 
-    const utterance = new SpeechSynthesisUtterance(message);
+    speechQueue.push({ message, speaker });
+    processSpeechQueue();
+  };
 
-    // Retrieve persona properties for the speaker
+  const processSpeechQueue = () => {
+    if (isSpeaking || speechQueue.length === 0) return;
+
+    const { message, speaker } = speechQueue.shift(); // Get the next message
+    isSpeaking = true;
+
+    const utterance = new SpeechSynthesisUtterance(message);
     const voices = speechSynthesis.getVoices();
     const selectedVoice = voices.find(
       (v) => v.voiceURI === personas[speaker]?.voice_language
     );
-
+    console.log(selectedVoice)
     if (selectedVoice) {
       utterance.voice = selectedVoice;
       console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
@@ -36,9 +53,21 @@ function App() {
     utterance.pitch = personas[speaker]?.pitch || 1; // Optional pitch customization
     utterance.rate = personas[speaker]?.rate || 1;   // Optional rate customization
 
+    utterance.onend = () => {
+      isSpeaking = false;
+      processSpeechQueue(); // Process the next message
+    };
+
+    utterance.onerror = (error) => {
+      console.error("Speech synthesis error:", error);
+      isSpeaking = false;
+      processSpeechQueue(); // Process the next message
+    };
+
     speechSynthesis.cancel(); // Stop any ongoing speech
     speechSynthesis.speak(utterance);
   };
+
   useEffect(() => {
     // Load personas on component mount
     const loadPersonas = async () => {
@@ -55,28 +84,35 @@ function App() {
     if (!wsRef.current) {
       wsRef.current = new WebSocket("ws://localhost:1000/ws");
 
-      wsRef.current.onopen = () => console.log("WebSocket connection established")
-      
+      wsRef.current.onopen = () => console.log("WebSocket connection established");
+
+      wsRef.current.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log("WebSocket message received:", data);
+          setHistory((prev) => [...prev, data]);
+          if (data.speaker !== "Moderator") {
+            speakMessage(data.message, data.speaker);
+          }
+          setIsLoading(false); // Stop spinner when a response is received
+        } catch (e) {
+          console.error("Failed to process WebSocket message:", e);
+          alert("An error occurred while processing a message.");
+          setIsLoading(false);
+        }
+      };
+
+      wsRef.current.onerror = (error) => {
+        setIsLoading(false);
+        console.error("WebSocket error:", error);
+      };
+
+      wsRef.current.onclose = (event) => {
+        console.log(
+          `WebSocket connection closed with code ${event.code} and reason: ${event.reason}`
+        );
+      };
     }
-    wsRef.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log("WebSocket message received:", data);
-        setHistory((prev) => [...prev, data]);
-        speakMessage(data.message, data.speaker);
-      } catch (e) {
-        console.error("Failed to process WebSocket message:", e);
-        alert("An error occurred while processing a message.");
-      }
-    };
-
-    wsRef.current.onerror = (error) => console.error("WebSocket error:", error);
-
-    wsRef.current.onclose = (event) => {
-      console.log(
-        `WebSocket connection closed with code ${event.code} and reason: ${event.reason}`
-      );
-    };
 
     // Cleanup WebSocket on component unmount
     return () => {
@@ -86,7 +122,6 @@ function App() {
       }
     };
   }, []);
-
 
   const startListening = () => {
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -106,6 +141,7 @@ function App() {
         const messagePayload = { speaker: "Moderator", message: transcript };
         console.log("Sending transcript to WebSocket:", messagePayload);
         wsRef.current.send(JSON.stringify(messagePayload));
+        setIsLoading(true); // Start spinner after sending
       } else {
         console.error("WebSocket is not open. Unable to send transcript.");
       }
@@ -116,7 +152,6 @@ function App() {
       setIsListening(false);
       recognition.stop();
 
-      // Provide feedback to the user
       if (event.error === "no-speech") {
         alert("No speech detected. Please try again.");
       }
@@ -161,9 +196,9 @@ function App() {
 
           {/* Moderator Input Section */}
           <div className="moderator-input">
-            {isListening ? (
+            {isListening || isLoading ? (
               <div className="listening-loader">
-                <p>Listening...</p>
+                <p>{isListening ? "Listening..." : "Waiting for response..."}</p>
                 <div className="spinner-border text-primary" role="status">
                   <span className="visually-hidden">Loading...</span>
                 </div>
