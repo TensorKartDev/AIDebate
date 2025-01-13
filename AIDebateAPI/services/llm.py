@@ -1,10 +1,13 @@
 import requests
 import json
-
-
+import os
+from dotenv import load_dotenv
+load_dotenv()
+ollama_host = os.getenv("OLLAMA_HOST")
+ollama_port = os.getenv("OLLAMA_PORT")
 def speak(messages, model):
     r = requests.post(
-        "http://127.0.0.1:11434/api/chat",
+        f"http://{ollama_host}:{ollama_port}/api/chat",
         json={"model": model, "messages": messages, "stream": True},
         stream=True
     )

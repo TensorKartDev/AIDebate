@@ -74,7 +74,7 @@ function VoiceTester() {
                 background: currentVoice === voice.name ? "#f0f8ff" : "#fff",
               }}
             >
-              <strong>{voice.name}</strong> ({voice.lang}){" "}
+              <strong>{voice.voiceURI}</strong> | <strong>{voice.name}</strong> ({voice.lang}){" "}
               {voice.default && <span style={{ color: "green" }}>Default</span>}
               <div style={{ marginTop: "5px" }}>
                 <button

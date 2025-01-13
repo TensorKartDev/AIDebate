@@ -24,11 +24,6 @@ export const fetchHistory = async () => {
   }
 };
 
-// Add the new moderatorSpeaks function
-export const moderatorSpeaks = async (payload) => {
-  const response = await axios.post(`${API_BASE_URL}/moderator-speaks`, payload);
-  return response.data;
-};
 // Submit a turn (speaker, topic, message)
 export const submitTurn = async ({ speaker, topic, message }) => {
   const payload = { speaker, topic, message };
@@ -81,28 +76,5 @@ export const participantResponse = async (participantName, formData) => {
   } catch (error) {
     console.error(`Error fetching response for participant ${participantName}:`, error);
     throw error;
-  }
-};
-//Randomness infused
-const shuffleParticipants = async () => {
-  const formData = new FormData();
-  const response = await axios.post(
-    `${API_BASE_URL}/shuffle-participants`,
-    formData,
-    {
-      headers: { "Content-Type": "application/json" },
-    }
-  );
-  return response.data.shuffled_participants;
-};
-const askPersonaQuestion = async (speaker, question) => {
-  try {
-    const response = await axios.post(`${API_BASE_URL}/moderator-ask`, {
-      speaker,
-      message: question
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error asking persona a question:", error);
   }
 };

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { fetchPersonas, moderatorTopic, participantResponse } from "./services/api";
+import React, { useState, useEffect, useRef } from "react";
+import { fetchPersonas } from "./services/api";
 import Transcript from "./components/Transcript";
 import { AiOutlineAudio } from "react-icons/ai";
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -8,12 +8,39 @@ import "./App.css";
 function App() {
   const [personas, setPersonas] = useState({});
   const [history, setHistory] = useState([]);
-  const [topic, setTopic] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [currentSpeaker, setCurrentSpeaker] = useState(null);
+  const wsRef = useRef(null);
+  const speakMessage = (message, speaker) => {
+    if (!("speechSynthesis" in window)) {
+      console.error("Text-to-speech is not supported in this browser.");
+      return;
+    }
 
+    const utterance = new SpeechSynthesisUtterance(message);
+
+    // Retrieve persona properties for the speaker
+    const voices = speechSynthesis.getVoices();
+    const selectedVoice = voices.find(
+      (v) => v.voiceURI === personas[speaker]?.voice_language
+    );
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+      console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+    } else {
+      console.warn(
+        `No matching voice found for speaker: ${speaker}. Using default voice.`
+      );
+    }
+
+    utterance.pitch = personas[speaker]?.pitch || 1; // Optional pitch customization
+    utterance.rate = personas[speaker]?.rate || 1;   // Optional rate customization
+
+    speechSynthesis.cancel(); // Stop any ongoing speech
+    speechSynthesis.speak(utterance);
+  };
   useEffect(() => {
+    // Load personas on component mount
     const loadPersonas = async () => {
       try {
         const data = await fetchPersonas();
@@ -23,7 +50,43 @@ function App() {
       }
     };
     loadPersonas();
+
+    // Establish WebSocket connection
+    if (!wsRef.current) {
+      wsRef.current = new WebSocket("ws://localhost:1000/ws");
+
+      wsRef.current.onopen = () => console.log("WebSocket connection established")
+      
+    }
+    wsRef.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log("WebSocket message received:", data);
+        setHistory((prev) => [...prev, data]);
+        speakMessage(data.message, data.speaker);
+      } catch (e) {
+        console.error("Failed to process WebSocket message:", e);
+        alert("An error occurred while processing a message.");
+      }
+    };
+
+    wsRef.current.onerror = (error) => console.error("WebSocket error:", error);
+
+    wsRef.current.onclose = (event) => {
+      console.log(
+        `WebSocket connection closed with code ${event.code} and reason: ${event.reason}`
+      );
+    };
+
+    // Cleanup WebSocket on component unmount
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close(1000, "Component unmounting");
+        wsRef.current = null;
+      }
+    };
   }, []);
+
 
   const startListening = () => {
     const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
@@ -37,13 +100,26 @@ function App() {
       const transcript = event.results[0][0].transcript;
       setIsListening(false);
       recognition.stop();
-      await handleModeratorInput(transcript);
+
+      // Send the transcript via WebSocket
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        const messagePayload = { speaker: "Moderator", message: transcript };
+        console.log("Sending transcript to WebSocket:", messagePayload);
+        wsRef.current.send(JSON.stringify(messagePayload));
+      } else {
+        console.error("WebSocket is not open. Unable to send transcript.");
+      }
     };
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
       setIsListening(false);
       recognition.stop();
+
+      // Provide feedback to the user
+      if (event.error === "no-speech") {
+        alert("No speech detected. Please try again.");
+      }
     };
 
     recognition.onend = () => {
@@ -51,102 +127,6 @@ function App() {
     };
 
     recognition.start();
-  };
-
-  const handleModeratorInput = async (transcript) => {
-    setIsProcessing(true);
-    try {
-      const payload = { speaker: "Moderator", topic: transcript, message: "" };
-      const response = await moderatorTopic(payload);
-
-      if (response.conversation_history) {
-        setHistory(response.conversation_history);
-        setTopic(transcript);
-        await handleParticipantResponses(Object.keys(personas)); // Start participant responses
-      }
-    } catch (error) {
-      console.error("Error handling moderator input:", error);
-      alert("Failed to set the debate topic.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const handleParticipantResponses = async (participants) => {
-    try {
-      for (const participant of participants) {
-        setCurrentSpeaker(participant);
-        try {
-          const formData = { topic }; // Use topic to send with API
-          const response = await participantResponse(participant, formData);
-  
-          if (response.responses && response.responses.length > 0) {
-            const { speaker, message } = response.responses[0];
-            setHistory((prevHistory) => [...prevHistory, { speaker, message }]); // Update transcript
-  
-            // Use voice_language from personas to select the appropriate voice
-          const voiceLanguage = personas[speaker]?.voice_language || "en-US";
-          console.log("persona voicez",voiceLanguage)
-          const voices = speechSynthesis.getVoices();
-          console.log(voices)
-          const selectedVoice = voices.find((v) => v.voiceURI === voiceLanguage);
-
-          const utterance = new SpeechSynthesisUtterance(message);
-          if (selectedVoice) {
-            utterance.voice = selectedVoice; // Assign the selected voice
-          } else {
-            console.warn(`Voice for language "${voiceLanguage}" not found, using default.`);
-          }
-          speechSynthesis.speak(utterance);
-  
-            // Delay between participants
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
-        } catch (error) {
-          console.error(`Error fetching response for ${participant}:`, error);
-        }
-      }
-    } catch (error) {
-      console.error("Error handling participant responses:", error);
-      alert("Failed to fetch participant responses.");
-    } finally {
-      setCurrentSpeaker(null); // Clear spinner after all responses are processed
-    }
-  };
-
-  const playAudio = (audio) => {
-    return new Promise((resolve, reject) => {
-      audio
-        .play()
-        .then(() => {
-          console.log("Audio playback started");
-          audio.onended = resolve; // Resolve when audio ends
-        })
-        .catch((error) => {
-          console.warn("Autoplay blocked or error occurred:", error);
-  
-          // Show a manual player as a fallback
-          const playerContainer = document.createElement("div");
-          const player = document.createElement("audio");
-          player.src = audio.src;
-          player.controls = true;
-          player.autoplay = true;
-  
-          player.onended = () => {
-            playerContainer.remove(); // Remove the player after playback ends
-            resolve();
-          };
-  
-          player.onerror = (err) => {
-            console.error("Error with manual playback:", err);
-            playerContainer.remove();
-            reject(err);
-          };
-  
-          playerContainer.appendChild(player);
-          document.body.appendChild(playerContainer);
-        });
-    });
   };
 
   return (
@@ -177,31 +157,7 @@ function App() {
         {/* Main Panel */}
         <div className="col-md-9 main-panel">
           <h1>AI Fireside Chat</h1>
-          {topic && <h2> Topic: {topic}</h2>}
           <Transcript history={history} personas={personas} />
-
-          {/* Spinner Popup */}
-          {isProcessing && (
-            <div className="popup-spinner">
-              <div className="spinner-content">
-                {currentSpeaker ? (
-                  <>
-                    <img
-                      src={personas[currentSpeaker]?.image || "/images/default-avatar.png"}
-                      alt={personas[currentSpeaker]?.name || "Processing"}
-                      className="spinner-avatar"
-                    />
-                    <p className="spinner-text">
-                      Processing response from {personas[currentSpeaker]?.name || currentSpeaker}...
-                    </p>
-                  </>
-                ) : (
-                  <p className="spinner-text">Processing topic...</p>
-                )}
-                <div className="spinner"></div>
-              </div>
-            </div>
-          )}
 
           {/* Moderator Input Section */}
           <div className="moderator-input">
