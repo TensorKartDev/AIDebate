@@ -11,6 +11,7 @@ ENV/
 env.bak/
 venv.bak/
 .idea/
+AI Debate.code-workspace
 
 # Distribution / packaging
 build/

@@ -129,9 +129,9 @@ async def process_message(queue_name, message):
             last_message = None
             if conversation_history and conversation_history[-1]["speaker"] != "Moderator":
                 last_message = conversation_history[-1]["message"]
-
+            description = persona.get("description")
             system_prompt = (
-                    f"Your role is to guide the conversation. Let's discuss: \"{content}\". "
+                    f"You name is {speaker} and you are {description}  your role is to guide the conversation. Let's discuss: \"{content}\". "
                     f"Please ensure your tone is neutral and humorous."
                 )
 
@@ -143,6 +143,7 @@ async def process_message(queue_name, message):
                         f"Let's explore the topic: '{content}'. "
                         f"Craft a very short strictly 2-liner response that is smart, witty, and infused with light humor. "
                         f"Relate to what was previously said {last_message} if relevant, Do not repeat any of hte past conversation or participant topic."
+                        f"Do not repeat the question of the moderator or moderators name or any past conversation as it is you may rephrase and comment on but donot repeat"
                     ),
                 },
             ]

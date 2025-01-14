@@ -12,16 +12,49 @@ class TagExtractor:
         self.ollama_host = os.getenv("OLLAMA_HOST")
         self.ollama_model = os.getenv("OLLAMA_MODEL", "default-model")
         self.candidate_tags = {
-            "Business": ["Walter","business", "economy", "enterprise"],
-            "Marketing": ["Walter","advertising", "sales", "branding"],
-            "Climate": ["Julia","environment", "global warming", "green energy"],
-            "Ethics": ["Lynda","Linda","fairness", "transparency", "AI governance"],
-            "AI": ["artificial intelligence", "machine learning", "automation"],
-            "Technology": ["tech", "innovation", "gadgets"],
-            "Healthcare": ["Alex","medicine", "health", "biotech"],
-            "Renewable Energy": ["solar", "wind energy", "clean energy"],
-            "Sustainability": ["eco-friendly", "recycling", "carbon footprint"],
-        }
+    "Business": [
+        "Walter", "business", "economy", "enterprise", "business transformation",
+        "customer experience", "sales strategy", "enterprise technology", "business growth"
+    ],
+    "Marketing": [
+        "Walter", "advertising", "sales", "branding", "creative marketing",
+        "product design", "customer engagement", "consumer tech", "technology trends"
+    ],
+    "Climate": [
+        "Julia", "environment", "global warming", "green energy", "climate change",
+        "carbon footprint", "climate innovation", "environmental policy", 
+        "sustainable development", "AI in sustainability", "greenhouse gases"
+    ],
+    "Ethics": [
+        "Lynda", "Linda", "ethics", "AI ethics", "responsibility", "fairness",
+        "transparency", "accountability", "AI governance", "ethical AI development",
+        "trustworthy AI", "bias mitigation", "data privacy", "policy innovation"
+    ],
+    "AI": [
+        "Lynda", "artificial intelligence", "machine learning", "automation", "AI hardware",
+        "AI governance", "pharmaceutical AI", "AI ethics", "AI in biology",
+        "AI sustainability", "AI fairness", "responsible AI"
+    ],
+    "Technology": [
+        "Walter", "tech", "innovation", "gadgets", "next-gen devices", 
+        "cloud computing", "hardware innovation", "enterprise technology",
+        "tech strategy", "software engineering"
+    ],
+    "Healthcare": [
+        "Alex", "medicine", "health", "biotech", "personalized medicine", 
+        "DNA sequencing", "biotechnology advancements", "health innovation",
+        "biological research", "genomics"
+    ],
+    "Renewable Energy": [
+        "Julia", "solar", "wind energy", "clean energy", "green energy", 
+        "eco-friendly energy", "renewables", "sustainable power", "carbon-neutral"
+    ],
+    "Sustainability": [
+        "Julia", "eco-friendly", "recycling", "carbon footprint", "green tech",
+        "sustainable development", "waste reduction", "environmental impact",
+        "sustainable practices", "climate resilience"
+    ]
+}
 
     def keyword_based_extraction(self, message):
         tags = []

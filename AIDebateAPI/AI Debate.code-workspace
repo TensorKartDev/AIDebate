@@ -8,6 +8,9 @@
 		},
 		{
 			"path": "../voice-tester"
+		},
+		{
+			"path": "../../../face_chat"
 		}
 	],
 	"settings": {}

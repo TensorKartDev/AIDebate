@@ -10,7 +10,7 @@
 
 # production
 /build
-
+public/animations/
 # misc
 .DS_Store
 .env.local
