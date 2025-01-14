@@ -1,0 +1,142 @@
+.transcript-wrapper {
+    display: flex;
+    height: 100%;
+  }
+  
+  .transcript-column {
+    overflow-y: auto;
+  }
+  
+  .transcript-left {
+    flex: 7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+    position: relative;
+    overflow: hidden; /* Prevents overflow beyond the container */
+  }
+  
+  .transcript-right {
+    flex: 3;
+    padding: 10px;
+    overflow-y: auto;
+    border-left: 1px solid #ddd;
+  }
+  
+  .placeholder {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f0f0f0;
+  }
+  
+  .moderator-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+  }
+  
+  .overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+  
+  .persona-animation-frame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5; /* Ensure it overlays appropriately */
+  }
+  
+  .start-listening-icon {
+    font-size: 60px;
+    color: #000;
+    cursor: pointer;
+    transition: transform 0.2s, color 0.2s;
+  }
+  
+  .start-listening-icon:hover {
+    transform: scale(1.2);
+    color: #007bff;
+  }
+  
+  .start-listening-icon.active {
+    color: #28a745;
+  }
+  
+  .transcript {
+    height: 100%;
+    padding: 10px;
+  }
+  
+  .transcript-entry {
+    display: flex;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+  }
+  
+  .avatar-container {
+    margin-right: 10px;
+  }
+  
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+  }
+  
+  .message-container {
+    flex-grow: 1;
+  }
+  
+  .message-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  
+  .markdown-message {
+    font-size: 16px;
+  }
+  
+  .hear-again-button-container {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+  }
+  
+  .hear-again-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .hear-again-button svg {
+    font-size: 20px;
+    color: #666;
+  }
+  
+  .hear-again-button:hover svg {
+    color: #007bff;
+  }
