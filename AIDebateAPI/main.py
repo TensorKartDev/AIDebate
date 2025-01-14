@@ -132,7 +132,7 @@ async def process_message(queue_name, message):
 
             system_prompt = (
                     f"Your role is to guide the conversation. Let's discuss: \"{content}\". "
-                    f"Please ensure your tone is neutral."
+                    f"Please ensure your tone is neutral and humorous."
                 )
 
             messages = [
@@ -141,8 +141,8 @@ async def process_message(queue_name, message):
                     "role": "user",
                     "content": (
                         f"Let's explore the topic: '{content}'. "
-                        f"Craft a very short response that is smart, witty, and infused with light humor. "
-                        f"Relate to what was previously said if relevant."
+                        f"Craft a very short strictly 2-liner response that is smart, witty, and infused with light humor. "
+                        f"Relate to what was previously said {last_message} if relevant, Do not repeat any of hte past conversation or participant topic."
                     ),
                 },
             ]
