@@ -26,12 +26,12 @@ class TagExtractor:
         "sustainable development", "AI in sustainability", "greenhouse gases"
     ],
     "Ethics": [
-        "Lynda", "Linda", "ethics", "AI ethics", "responsibility", "fairness",
+        "Steve", "Steve", "ethics", "AI ethics", "responsibility", "fairness",
         "transparency", "accountability", "AI governance", "ethical AI development",
         "trustworthy AI", "bias mitigation", "data privacy", "policy innovation"
     ],
     "AI": [
-        "Lynda", "artificial intelligence", "machine learning", "automation", "AI hardware",
+        "Steve", "artificial intelligence", "machine learning", "automation", "AI hardware",
         "AI governance", "pharmaceutical AI", "AI ethics", "AI in biology",
         "AI sustainability", "AI fairness", "responsible AI"
     ],

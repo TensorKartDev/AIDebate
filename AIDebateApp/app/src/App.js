@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { fetchPersonas } from "./services/api";
 import Transcript from "./components/Transcript";
 import { AiOutlineAudio } from "react-icons/ai";
+import { ElevenLabsClient, play } from "elevenlabs";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
 
@@ -15,7 +16,8 @@ function App() {
   const wsRef = useRef(null);
   const speechQueue = useRef([]);
   const isSpeakingRef = useRef(false);
-
+  const ELEVEN_LABS_API_KEY = "sk_686fa8ad1bb17dabd5cb3057bfedc6a0d4b2dc6d0542abc9"; 
+  
   const speakMessage = (message, speaker, index) => {
     if (speaker === "Moderator") {
       console.log("Skipping reading aloud for Moderator.");
@@ -32,7 +34,7 @@ function App() {
     processSpeechQueue();
   };
 
-  const processSpeechQueue = () => {
+  const processSpeechQueue = async () => {
     if (isSpeakingRef.current || speechQueue.current.length === 0) return;
 
     const { message, speaker, index } = speechQueue.current.shift();
@@ -41,42 +43,84 @@ function App() {
     setActiveSpeaker(speaker);
     setHighlightedTextId(index);
 
-    const utterance = new SpeechSynthesisUtterance(message);
+    if (personas[speaker]?.useElevenLabs) {
+        // Use ElevenLabs for voice synthesis
+        try {
+            const elevenlabs = new ElevenLabsClient({
+                apiKey: ELEVEN_LABS_API_KEY, // Use the constant API key
+            });
+
+            const voice = personas[speaker]?.elevenlabs_voice || "Sarah"; // Default to "Sarah" if not specified
+            const modelId = personas[speaker]?.model_id || "eleven_multilingual_v2"; // Default model
+
+            console.log(`Generating speech using ElevenLabs voice: ${voice}`);
+
+            // Generate audio using ElevenLabs
+            const audio = await elevenlabs.generate({
+                voice,
+                text: message,
+                model_id: modelId,
+            });
+
+            // Play the generated audio using ElevenLabs' built-in `play` method
+            await play(audio);
+
+            // When playback ends, reset the state and process the next item
+            isSpeakingRef.current = false;
+            setActiveSpeaker(null);
+            setHighlightedTextId(null);
+            processSpeechQueue(); // Process the next item in the queue
+            return; // Skip browser speech synthesis since ElevenLabs is used
+        } catch (error) {
+            console.error("Error using ElevenLabs for speech synthesis:", error);
+        }
+    }
+
+    // Fallback to browser voices
     const voices = speechSynthesis.getVoices();
+    if (!voices || !Array.isArray(voices)) {
+        console.error("Browser voices are not available.");
+        isSpeakingRef.current = false;
+        setActiveSpeaker(null);
+        setHighlightedTextId(null);
+        return;
+    }
+
     const selectedVoice = voices.find(
-      (v) => v.voiceURI === personas[speaker]?.voice_language
+        (v) => v.voiceURI === personas[speaker]?.voice_language
     );
 
+    let utterance = new SpeechSynthesisUtterance(message);
+
     if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
+        utterance.voice = selectedVoice;
+        console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.lang})`);
     } else {
-      console.warn(
-        `No matching voice found for speaker: ${speaker}. Using default voice.`
-      );
+        console.warn(
+            `No matching browser voice found for speaker: ${speaker}. Using default voice.`
+        );
     }
 
     utterance.pitch = personas[speaker]?.pitch || 1;
     utterance.rate = personas[speaker]?.rate || 1;
 
     utterance.onend = () => {
-      isSpeakingRef.current = false;
-      setActiveSpeaker(null);
-      setHighlightedTextId(null);
-      processSpeechQueue(); // Process the next item in the queue
+        isSpeakingRef.current = false;
+        setActiveSpeaker(null);
+        setHighlightedTextId(null);
+        processSpeechQueue(); // Process the next item in the queue
     };
 
     utterance.onerror = (error) => {
-      console.error("Speech synthesis error:", error);
-      isSpeakingRef.current = false;
-      setActiveSpeaker(null);
-      setHighlightedTextId(null);
-      processSpeechQueue(); // Process the next item in the queue
+        console.error("Speech synthesis error:", error);
+        isSpeakingRef.current = false;
+        setActiveSpeaker(null);
+        setHighlightedTextId(null);
+        processSpeechQueue(); // Process the next item in the queue
     };
 
     speechSynthesis.speak(utterance);
-  };
-
+};
   useEffect(() => {
     const loadPersonas = async () => {
       try {
