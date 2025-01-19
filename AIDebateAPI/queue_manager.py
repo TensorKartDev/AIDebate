@@ -5,245 +5,146 @@ import threading
 import logging
 from dotenv import load_dotenv
 import asyncio
-
 class RabbitMQManager:
     """
-    Class to manage RabbitMQ setup, message publishing, and consumption.
+    RabbitMQ Manager for AI Fireside Chat with dynamic routing using persona-based tags.
     """
 
-    def __init__(self):
-        # Load environment variables from .env file
+    def __init__(self, personas, host="localhost", exchange="fireside_exchange"):
+        """
+        Initialize RabbitMQManager with personas and connection settings.
+        """
         load_dotenv()
 
-        self.host = os.getenv("RABBITMQ_HOST", "localhost")
-        self.persona_file = os.getenv("PERSONA_FILE", "personas.json")
-        self.exchange_name = os.getenv("EXCHANGE_NAME", "discussion_exchange")
-
+        self.host = os.getenv("RABBITMQ_HOST", host)
+        self.exchange_name = os.getenv("EXCHANGE_NAME", exchange)
         self.connection_params = pika.ConnectionParameters(
             host=self.host,
-            heartbeat=60,  # Heartbeat to maintain connection
-            blocked_connection_timeout=300  # Timeout for blocked connections
+            heartbeat=60,
+            blocked_connection_timeout=300
         )
+        self.context_queue = "context_queue"
 
-        self.channels = []
-        self.connections = []
+        # Load personas and tags
+        self.personas = personas
+        self.participants = list(self.personas.keys())
+        self.candidate_tags = {
+            persona: data.get("relevant_tags", []) for persona, data in self.personas.items()
+        }
+        self.connection = None
+        self.channel = None
 
-        # Validate persona file
-        if not os.path.exists(self.persona_file):
-            raise FileNotFoundError(f"{self.persona_file} not found.")
+        logging.info(f"Loaded personas: {self.participants}")
 
-        # Load personas
-        with open(self.persona_file, "r") as f:
-            self.personas = json.load(f)
-
-        # Extract agent names
-        self.agents = list(self.personas.keys())
-
-    def _get_connection_and_channel(self):
-        """
-        Create and return a new RabbitMQ connection and channel.
-        """
-        connection = pika.BlockingConnection(self.connection_params)
-        channel = connection.channel()
-        return connection, channel
-
-    def open_connection(self):
-        """
-        Ensure a RabbitMQ connection is open.
-        """
-        if not hasattr(self, 'connection') or self.connection is None or self.connection.is_closed:
+    def ensure_channel_open(self):
+        if not self.connection or self.connection.is_closed:
             self.connection = pika.BlockingConnection(self.connection_params)
-            self.channels.append(self.connection.channel())
-            print("RabbitMQ connection opened.")
+            self.channel = self.connection.channel()
+            logging.info("Reopened RabbitMQ connection and channel.")
 
-    def close_all_connections(self):
+    def setup_exchange_and_queues(self):
         """
-        Close all RabbitMQ channels and connections.
+        Set up RabbitMQ direct exchange and bind queues with relevant tags.
         """
-        # Close all channels
-        for channel in self.channels:
-            try:
-                channel.close()
-                print("Channel closed.")
-            except Exception as e:
-                logging.error(f"Error closing channel: {e}")
-
-        # Close all connections
-        if hasattr(self, 'connection') and self.connection:
-            try:
-                self.connection.close()
-                print("Main connection closed.")
-            except Exception as e:
-                logging.error(f"Error closing connection: {e}")
-
-    def setup_queues(self):
-        """
-        Set up RabbitMQ exchange, individual agent queues, and the context queue.
-        """
-        connection, channel = self._get_connection_and_channel()
+        self.connection = pika.BlockingConnection(self.connection_params)
+        self.channel = self.connection.channel()
 
         # Declare the exchange
-        channel.exchange_declare(exchange=self.exchange_name, exchange_type="fanout")
+        self.channel.exchange_declare(exchange=self.exchange_name, exchange_type="direct")
 
-        # Declare individual queues for agents
-        for agent in self.agents:
-            agent_queue = f"{agent.replace(' ', '_')}_queue"
-            try:
-                channel.queue_declare(queue=agent_queue, passive=True)
-                print(f"Queue already exists: {agent_queue}")
-            except pika.exceptions.ChannelClosedByBroker:
-                # If the queue doesn't exist, create and bind it
-                connection, channel = self._get_connection_and_channel()
-                channel.queue_declare(queue=agent_queue)
-                channel.queue_bind(exchange=self.exchange_name, queue=agent_queue)
-                print(f"Queue created and bound: {agent_queue}")
+        # Create and bind participant queues with tags as binding keys
+        for participant, tags in self.candidate_tags.items():
+            queue_name = f"{participant.replace(' ', '_')}_queue"
+            self.channel.queue_declare(queue=queue_name)
+            for tag in tags:
+                self.channel.queue_bind(exchange=self.exchange_name, queue=queue_name, routing_key=tag)
+                logging.info(f"Bound queue {queue_name} to {self.exchange_name} with binding key '{tag}'.")
 
-        # Declare the common context queue
-        context_queue = "context_queue"
-        try:
-            channel.queue_declare(queue=context_queue, passive=True)
-            print(f"Queue already exists: {context_queue}")
-        except pika.exceptions.ChannelClosedByBroker:
-            connection, channel = self._get_connection_and_channel()
-            channel.queue_declare(queue=context_queue)
-            channel.queue_bind(exchange=self.exchange_name, queue=context_queue)
-            print(f"Queue created and bound: {context_queue}")
+        # Create the context queue
+        self.channel.queue_declare(queue=self.context_queue)
+        self.channel.queue_bind(exchange=self.exchange_name, queue=self.context_queue, routing_key="context_queue")
+        logging.info(f"Context queue {self.context_queue} created and bound with key 'context_queue'.")
 
-        print("RabbitMQ setup complete with individual and context queues.")
-        connection.close()
-
-    def publish_message_to_exchange(self, exchange, message):
+    def publish_message(self, message, routing_key=""):
         """
-        Publish a message to the specified exchange.
+        Publish a message to the exchange with an optional routing key.
         """
-        connection, channel = self._get_connection_and_channel()
-        try:
-            channel.basic_publish(exchange=exchange, routing_key="", body=message)
-            print(f"Published message to exchange {exchange}: {message}")
-        finally:
-            channel.close()
-            connection.close()
-
-    def publish_message_to_queue(self, queue_name, message):
-        """
-        Publish a message directly to a queue.
-        """
-        connection, channel = self._get_connection_and_channel()
-        try:
-            channel.basic_publish(exchange="", routing_key=queue_name, body=message)
-            print(f"Published message to queue {queue_name}: {message}")
-        finally:
-            channel.close()
-            connection.close()
-
-    def purge_queues(self):
-        """
-        Purge all messages from individual agent queues and the context queue.
-        """
-        connection, channel = self._get_connection_and_channel()
-
-        for agent in self.agents:
-            agent_queue = f"{agent.replace(' ', '_')}_queue"
-            try:
-                channel.queue_purge(queue=agent_queue)
-                print(f"Purged queue: {agent_queue}")
-            except Exception as e:
-                logging.error(f"Error purging queue {agent_queue}: {e}")
-
-        context_queue = "context_queue"
-        try:
-            channel.queue_purge(queue=context_queue)
-            print(f"Purged queue: {context_queue}")
-        except Exception as e:
-            logging.error(f"Error purging queue context_queue: {e}")
-
-        connection.close()
-
-    def delete_queues_and_exchange(self):
-        """
-        Delete all queues and the exchange.
-        """
-        connection, channel = self._get_connection_and_channel()
-
-        for agent in self.agents:
-            agent_queue = f"{agent.replace(' ', '_')}_queue"
-            try:
-                channel.queue_delete(queue=agent_queue)
-                print(f"Deleted queue: {agent_queue}")
-            except Exception as e:
-                logging.error(f"Error deleting queue {agent_queue}: {e}")
-
-        context_queue = "context_queue"
-        try:
-            channel.queue_delete(queue=context_queue)
-            print(f"Deleted queue: {context_queue}")
-        except Exception as e:
-            logging.error(f"Error deleting queue context_queue: {e}")
-
-        try:
-            channel.exchange_delete(exchange=self.exchange_name)
-            print(f"Deleted exchange: {self.exchange_name}")
-        except Exception as e:
-            logging.error(f"Error deleting exchange {self.exchange_name}: {e}")
-
-        connection.close()
+        self.ensure_channel_open()
+        self.channel.basic_publish(exchange=self.exchange_name, routing_key=routing_key, body=json.dumps(message))
+        logging.info(f"Published message to exchange '{self.exchange_name}' with routing key '{routing_key}': {message}")
 
     def start_consuming(self, queue_name, callback_function):
         """
-        Start consuming messages from a queue and process them using the callback function.
-        Handles both synchronous and asynchronous callbacks.
+        Start consuming messages from the specified queue.
         """
-        connection, channel = self._get_connection_and_channel()
-        self.channels.append(channel)
+        connection = pika.BlockingConnection(self.connection_params)
+        channel = connection.channel()
 
-        def on_message(ch, method, properties, body):
-            message = body.decode()
-            print(f"Received message in {queue_name}: {message}")
+        async def async_callback_wrapper(queue_name, message):
+            """
+            Wrapper to run async callback function in the event loop.
+            """
+            await callback_function(queue_name, message)
 
+        def wrapped_callback(ch, method, properties, body):
+            """
+            Wrap the provided callback function to adapt RabbitMQ's arguments.
+            """
             try:
-                if asyncio.iscoroutinefunction(callback_function):
-                    # Run the async callback in the event loop
-                    asyncio.run(callback_function(queue_name, message))
-                else:
-                    # Call the sync callback directly
-                    callback_function(queue_name, message)
+                message = body.decode()
+                loop = asyncio.new_event_loop()  # Create a new event loop for the thread
+                asyncio.set_event_loop(loop)  # Set the loop for this thread
+                loop.run_until_complete(async_callback_wrapper(queue_name, message))
             except Exception as e:
-                logging.error(f"Error processing message from {queue_name}: {e}")
+                logging.error(f"Error in wrapped_callback for queue {queue_name}: {e}")
+            finally:
+                loop.close()  # Clean up the loop
 
-        channel.basic_consume(queue=queue_name, on_message_callback=on_message, auto_ack=True)
-        print(f"Listening to queue: {queue_name}")
+        channel.basic_consume(queue=queue_name, on_message_callback=wrapped_callback, auto_ack=True)
         try:
+            logging.info(f"Consuming messages from queue: {queue_name}")
             channel.start_consuming()
-        except KeyboardInterrupt:
-            print("Stopping consumer.")
-            channel.stop_consuming()
-            connection.close()
+        except Exception as e:
+            logging.error(f"Error consuming queue {queue_name}: {e}")
+        finally:
+            if channel.is_open:
+                channel.close()
+            if connection.is_open:
+                connection.close()
 
-    def connect_agents(self, agents, callback_function):
+    def connect_agents(self, callback_function):
         """
-        Connect agents to their respective queues and the context queue.
+        Start consumers for all participant queues and the context queue.
+        :param callback_function: Function to handle messages from the queues.
         """
-        threads = []
-
-        for agent in agents:
-            agent_queue = f"{agent.replace(' ', '_')}_queue"
+        for participant in self.participants:
+            queue_name = f"{participant.replace(' ', '_')}_queue"
             thread = threading.Thread(
-                target=self.start_consuming,
-                args=(agent_queue, callback_function),
-                name=f"{agent}_listener"
+                target=self.start_consuming, args=(queue_name, callback_function), daemon=True
             )
             thread.start()
-            threads.append(thread)
-            print(f"Agent {agent} connected to queue {agent_queue}")
+            logging.info(f"Started consumer for {queue_name}")
 
-        # Context queue
-        context_thread = threading.Thread(
-            target=self.start_consuming,
-            args=("context_queue", callback_function),
-            name="context_queue_listener"
+        thread = threading.Thread(
+            target=self.start_consuming, args=(self.context_queue, callback_function), daemon=True
         )
-        context_thread.start()
-        threads.append(context_thread)
-        print("Context queue listener started.")
+        thread.start()
+        logging.info(f"Started consumer for {self.context_queue}")
 
-        return threads
+    def close_all_connections(self):
+        """
+        Close all RabbitMQ connections.
+        """
+        try:
+            if self.channel and not self.channel.is_closed:
+                self.channel.close()
+                logging.info("RabbitMQ channel closed.")
+        except Exception as e:
+            logging.error(f"Error closing channel: {e}")
+
+        try:
+            if self.connection and not self.connection.is_closed:
+                self.connection.close()
+                logging.info("RabbitMQ connection closed.")
+        except Exception as e:
+            logging.error(f"Error closing connection: {e}")

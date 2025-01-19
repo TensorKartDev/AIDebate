@@ -10,7 +10,7 @@
         "voice_gender": "male",
         "relevant_tags": [
             "policy", "discussion", "moderation", "collaboration", "guidance", 
-            "overview", "questions", "engagement", "leadership", "AI", "humor"
+            "overview", "questions", "engagement", "leadership"
         ]
     },
     "Marketing Manager Dell": {
@@ -26,9 +26,9 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "Walter", "marketing", "hardware", "technology", "innovation", 
+            "marketing", "hardware", "technology", "innovation",
             "business transformation", "customer experience", "usability", 
-            "product design", "next-gen devices", "tech strategy", "business growth", 
+            "product design", "next-gen devices", "tech strategy", "business growth",
             "cloud computing", "AI hardware", "creative marketing", "technology trends"
         ]
     },
@@ -45,11 +45,11 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "Alex", "biotech", "genomics", "healthcare", "AI", 
-            "personalized medicine", "sustainability", "DNA sequencing", 
-            "genomics innovation", "environmental biotech", "biotechnology advancements", 
-            "pharmaceutical AI", "AI in biology", "humor in science", "biological research", 
-            "bioinformatics", "climate-biotech synergy"
+            "biotech", "genomics", "healthcare", "personalized medicine", 
+            "DNA sequencing", "genomics innovation", "environmental biotech", 
+            "biotechnology advancements", "pharmaceutical AI", "AI in biology", 
+            "humor in science", "biological research", "bioinformatics", 
+            "climate-biotech synergy"
         ]
     },
     "Climate Change Specialist": {
@@ -65,9 +65,9 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "Julia", "climate", "sustainability", "renewable energy", "environment", 
-            "waste reduction", "carbon footprint", "green tech", "AI in sustainability", 
-            "solar energy", "water conservation", "wind energy", "climate innovation", 
+            "climate", "sustainability", "renewable energy", "environment", 
+            "waste reduction", "carbon footprint", "green tech", "AI in sustainability",
+            "solar energy", "water conservation", "wind energy", "climate innovation",
             "environmental policy", "sustainable development goals", "climate humor"
         ]
     },
@@ -84,7 +84,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "Steve","Steve", "ethics", "AI ethics", "transparency", "fairness", "accountability", 
+            "ethics", "AI ethics", "transparency", "fairness", "accountability", 
             "AI governance", "responsible AI", "ethical innovation", "AI laws", 
             "data privacy", "bias mitigation", "humor in AI ethics", "policy innovation", 
             "ethical AI development", "trustworthy AI"
