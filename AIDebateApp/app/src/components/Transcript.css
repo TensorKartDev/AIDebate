@@ -32,16 +32,19 @@
     align-items: center;
     justify-content: center;
     background-color: #f0f0f0;
+    padding: 0; /* Ensure no padding cuts into the image */
+    box-sizing: border-box;
   }
   
   .moderator-image {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: cover; /* Ensure the image covers the entire area */
     position: absolute;
     top: 0;
     left: 0;
     z-index: 1;
+    border-radius: 0; /* Remove border radius for a fully filled area */
   }
   
   .overlay {

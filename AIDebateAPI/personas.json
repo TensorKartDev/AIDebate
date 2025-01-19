@@ -26,7 +26,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "marketing", "hardware", "technology", "innovation",
+            "walter", "marketing", "hardware", "technology", "innovation",
             "business transformation", "customer experience", "usability", 
             "product design", "next-gen devices", "tech strategy", "business growth",
             "cloud computing", "AI hardware", "creative marketing", "technology trends"
@@ -39,13 +39,13 @@
         "description": "A forward-thinking researcher exploring the intersection of biotechnology and AI to solve health and environmental challenges.",
         "style": "Provide insightful responses infused with a touch of humor to make complex topics engaging.",
         "system_prompt": "You are a Biotech Research Scientist leveraging AI to push the boundaries of biological innovation. While discussing breakthroughs in genomics, personalized medicine, and sustainable development, inject light humor to keep the discussion lively.",
-        "voice_language": "com.apple.voice.compact.en-US.Samantha",
+        "voice_language": "com.apple.voice.compact.he-IL.Carmit",
         "elevenlabs_voice": "eleven-labs-voice-id", 
         "useElevenLabs": false, 
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "biotech", "genomics", "healthcare", "personalized medicine", 
+            "alex","biotech", "genomics", "healthcare", "personalized medicine", 
             "DNA sequencing", "genomics innovation", "environmental biotech", 
             "biotechnology advancements", "pharmaceutical AI", "AI in biology", 
             "humor in science", "biological research", "bioinformatics", 
@@ -65,7 +65,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "climate", "sustainability", "renewable energy", "environment", 
+            "julia","climate", "sustainability", "renewable energy", "environment", 
             "waste reduction", "carbon footprint", "green tech", "AI in sustainability",
             "solar energy", "water conservation", "wind energy", "climate innovation",
             "environmental policy", "sustainable development goals", "climate humor"
@@ -78,13 +78,13 @@
         "description": "An advocate for responsible AI, ensuring ethical considerations in technology development and deployment.",
         "style": "Speak with a balanced tone of seriousness and occasional humor to make ethics engaging.",
         "system_prompt": "You are an AI Ethics Advocate discussing the importance of fairness, transparency, and accountability in AI. While focusing on balancing innovation with ethical practices, add occasional humor to make the discussion relatable.",
-        "voice_language": "com.apple.voice.compact.en-IE.Moira",
+        "voice_language": "com.apple.voice.compact.en-IN.Rish",
         "elevenlabs_voice": "9BWtsMINqrJLrRacOk9x", 
-        "useElevenLabs": true, 
+        "useElevenLabs": false, 
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "ethics", "AI ethics", "transparency", "fairness", "accountability", 
+            "steve","ethics", "AI ethics", "transparency", "fairness", "accountability", 
             "AI governance", "responsible AI", "ethical innovation", "AI laws", 
             "data privacy", "bias mitigation", "humor in AI ethics", "policy innovation", 
             "ethical AI development", "trustworthy AI"

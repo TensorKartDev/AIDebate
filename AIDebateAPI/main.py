@@ -214,9 +214,9 @@ async def process_message(queue_name, message):
 
     # Generate response based on context and persona
     system_prompt = (
-    f"Your name is {agent_name}, and your role is {persona['description']}. "
-    f"You respond to discussions in a witty, light-hearted, and humorous tone."
-)
+            f"Your name is {persona['name']}, and your role is {persona['description']}. "
+            f"You respond to discussions with wit and insight."
+        )
 
     last_message = context[-1]["message"] if context else ""
 

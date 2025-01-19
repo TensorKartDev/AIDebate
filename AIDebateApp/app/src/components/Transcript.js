@@ -49,14 +49,6 @@ const Transcript = ({ history, personas, highlightedTextId, speakMessage, isList
               alt="Moderator"
               className="moderator-image"
             />
-            <div className="overlay">
-              <AiOutlineAudio
-                className={`start-listening-icon ${isListening ? "active" : ""}`}
-                onClick={startListening}
-                title="Start Listening"
-                size={60} // Larger icon for better visual
-              />
-            </div>
           </div>
         )}
       </div>
