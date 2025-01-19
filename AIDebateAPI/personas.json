@@ -26,7 +26,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "walter", "marketing", "hardware", "technology", "innovation",
+            "walter", "all","everyone","marketing", "hardware", "technology", "innovation",
             "business transformation", "customer experience", "usability", 
             "product design", "next-gen devices", "tech strategy", "business growth",
             "cloud computing", "AI hardware", "creative marketing", "technology trends"
@@ -45,7 +45,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "alex","biotech", "genomics", "healthcare", "personalized medicine", 
+            "alex","all","everyone","biotech", "genomics", "healthcare", "personalized medicine", 
             "DNA sequencing", "genomics innovation", "environmental biotech", 
             "biotechnology advancements", "pharmaceutical AI", "AI in biology", 
             "humor in science", "biological research", "bioinformatics", 
@@ -65,7 +65,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "julia","climate", "sustainability", "renewable energy", "environment", 
+            "julia","all","everyone","climate", "sustainability", "renewable energy", "environment", 
             "waste reduction", "carbon footprint", "green tech", "AI in sustainability",
             "solar energy", "water conservation", "wind energy", "climate innovation",
             "environmental policy", "sustainable development goals", "climate humor"
@@ -84,7 +84,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "steve","ethics", "AI ethics", "transparency", "fairness", "accountability", 
+            "steve","ethics","all","everyone", "AI ethics", "transparency", "fairness", "accountability", 
             "AI governance", "responsible AI", "ethical innovation", "AI laws", 
             "data privacy", "bias mitigation", "humor in AI ethics", "policy innovation", 
             "ethical AI development", "trustworthy AI"
