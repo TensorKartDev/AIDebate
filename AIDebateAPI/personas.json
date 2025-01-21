@@ -26,10 +26,10 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "walter", "all","everyone","marketing", "hardware", "technology", "innovation",
+            "walter", "everyone","marketing", "technology", "innovation",
             "business transformation", "customer experience", "usability", 
-            "product design", "next-gen devices", "tech strategy", "business growth",
-            "cloud computing", "AI hardware", "creative marketing", "technology trends"
+            "product design", "next-gen devices", "tech strategy", "growth",
+            "cloud computing", "AI hardware", "creative", "trends"
         ]
     },
     "Biotech Research Scientist": {
@@ -45,9 +45,9 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "alex","all","everyone","biotech", "genomics", "healthcare", "personalized medicine", 
-            "DNA sequencing", "genomics innovation", "environmental biotech", 
-            "biotechnology advancements", "pharmaceutical AI", "AI in biology", 
+            "alex","biotech", "genomics", "healthcare", "personalized medicine", 
+            "DNA sequencing", "genomics innovation", "environmental", 
+            "biotechnology advancements", "pharmaceutical AI", "biology", 
             "humor in science", "biological research", "bioinformatics", 
             "climate-biotech synergy"
         ]
@@ -65,29 +65,29 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "julia","all","everyone","climate", "sustainability", "renewable energy", "environment", 
-            "waste reduction", "carbon footprint", "green tech", "AI in sustainability",
-            "solar energy", "water conservation", "wind energy", "climate innovation",
-            "environmental policy", "sustainable development goals", "climate humor"
+            "julia","climate", "sustainability", "renewable energy", "environment", 
+            "waste reduction", "carbon footprint", "green tech",
+            "solar", "water conservation", "wind", "innovation",
+            "environmental policy", "sustainable development goals", "humor"
         ]
     },
     "AI Ethics Advocate": {
         "name": "Steve",
-        "model_name": "wizardlm2",
+        "model_name": "llama3",
         "image": "/images/ai_ethics_advocate.jpg",
         "description": "An advocate for responsible AI, ensuring ethical considerations in technology development and deployment.",
         "style": "Speak with a balanced tone of seriousness and occasional humor to make ethics engaging.",
         "system_prompt": "You are an AI Ethics Advocate discussing the importance of fairness, transparency, and accountability in AI. While focusing on balancing innovation with ethical practices, add occasional humor to make the discussion relatable.",
-        "voice_language": "com.apple.voice.compact.en-IN.Rish",
+        "voice_language": "com.apple.voice.compact.en-IN.Rishi",
         "elevenlabs_voice": "9BWtsMINqrJLrRacOk9x", 
         "useElevenLabs": false, 
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "steve","ethics","all","everyone", "AI ethics", "transparency", "fairness", "accountability", 
-            "AI governance", "responsible AI", "ethical innovation", "AI laws", 
-            "data privacy", "bias mitigation", "humor in AI ethics", "policy innovation", 
-            "ethical AI development", "trustworthy AI"
+            "steve", "AI ethics", "transparency", "fairness", "accountability", 
+            "AI governance", "responsible AI", "ethical", "AI laws", 
+            "data privacy", "bias mitigation", "policy innovation", 
+            "ethical development", "trustworthy AI"
         ]
     }
 }

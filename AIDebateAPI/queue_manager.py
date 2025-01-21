@@ -71,7 +71,7 @@ class RabbitMQManager:
         """
         self.ensure_channel_open()
         self.channel.basic_publish(exchange=self.exchange_name, routing_key=routing_key, body=json.dumps(message))
-        logging.info(f"Published message to exchange '{self.exchange_name}' with routing key '{routing_key}': {message}")
+        logging.critical(f"Published message to exchange '{self.exchange_name}' with routing key '{routing_key}': {message}")
 
     def start_consuming(self, queue_name, callback_function):
         """

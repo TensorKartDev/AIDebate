@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 from typing import List, Dict
@@ -11,7 +12,7 @@ from queue_manager import RabbitMQManager
 from metadata import TagExtractor
 from dotenv import load_dotenv
 from services.llm import speak
-
+import logging_config
 load_dotenv()
 
 # Initialize FastAPI app
@@ -57,6 +58,14 @@ class Message(BaseModel):
     topic: str = ""
     message: str = ""
 
+def remove_emoticons(text):
+    # Define a regex pattern to match emojis and emoticons
+    emoji_pattern = re.compile(
+        "[\U00010000-\U0010FFFF]",  # Match any Unicode emoji character
+        flags=re.UNICODE
+    )
+    # Replace emojis with an empty string
+    return emoji_pattern.sub(r'', text)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
@@ -73,90 +82,64 @@ async def websocket_endpoint(websocket: WebSocket):
             raw_message = await websocket.receive_text()
             message = json.loads(raw_message)
 
-            logging.info(f"Message received from client: {message}")
+            logging.debug(f"Message received from client: {message}")
 
             # Check if the message has already been processed
             is_processed = "tags" in message and message["tags"]
-            is_explained = message.get("isExplained", False)
+            logging.info(f"is_processed: {is_processed}")
 
             if not is_processed:
                 # New message, typically from Moderator
-                logging.info("New message detected, extracting tags.")
+                logging.info("New Moderator message detected, extracting tags.")
                 tags = tag_extractor.extract_tags(message["message"], method="keyword")
                 message["tags"] = tags
                 message["isProcessed"] = True  # Mark the message as processed
-                message["isExplained"] = False  # New messages are not explained yet
 
-                # Publish the new message to the exchange
-                rabbitmq_manager.publish_message(
-                    {
-                        "speaker": message["speaker"],
-                        "message": message["message"],
-                        "tags": tags,
-                        "context": [],  # Empty context for new messages
-                        "isExplained": False,  # Set explicitly for new messages
-                        "previous_speaker": message.get("speaker", ""),
-                    }
-                )
+                # Publish the message with all relevant routing keys
+                all_tag_values = {tag for tags_list in tags.values() for tag in tags_list}
+                for tag_value in all_tag_values:
+                    rabbitmq_manager.publish_message(
+                        {
+                            "speaker": message["speaker"],
+                            "message": message["message"],
+                            "tags": tags,
+                            "context": message.get("context", []),
+                            "isProcessed": True,
+                        },
+                        routing_key=tag_value
+                    )
             else:
-                ## Processed response detected
-                logging.info("Processed message detected. Forwarding to context_queue and discussion_exchange.")
+                logging.info("Processed message detected. Routing to context_queue.")
 
             # Avoid duplicate speakers
+            current_speaker = message["speaker"]
             previous_speaker = message.get("previous_speaker", "")
-            if message["speaker"] == previous_speaker:
-                logging.info(f"Skipping duplicate response from {message['speaker']}.")
-                return
+            logging.info("--------------- In Websocket ------------------")
+            logging.warning(f"- Current speaker: {current_speaker}")
+            logging.warning(f"- Previous speaker: {previous_speaker}")
+            logging.warning(f"- Tags: {message.get('tags', {})}")
+            logging.info("------------------END debug------------------")
+
+            if previous_speaker == current_speaker:
+                logging.warning(f"Skipping duplicate response from {current_speaker}.")
+                continue
 
             # Update previous speaker in the message
-            message["previous_speaker"] = message["speaker"]
+            message["previous_speaker"] = current_speaker
 
             # Publish to context_queue for WebSocket updates
             rabbitmq_manager.publish_message(
                 {
                     "speaker": message["speaker"],
                     "message": message["message"],
-                    "tags": message["tags"],
+                    "tags": message.get("tags", {}),
                     "context": message.get("context", []),
+                    "previous_speaker": message["previous_speaker"],
                     "isProcessed": True,
-                    "isExplained": is_explained,
                 },
                 routing_key="context_queue"
             )
 
-            # Publish back to discussion_exchange with routing keys for further routing
-            # Publish processed response back to discussion_exchange with relevant tags
-            if message["tags"]:
-            # Extract all tag values from the dictionary (flattened list)
-                all_tag_values = [tag for tags in message["tags"].values() for tag in tags]
-                
-                # Use unique tags as routing keys
-                for tag_value in set(all_tag_values):  # Use set to avoid duplicate tag values
-                    rabbitmq_manager.publish_message(
-                        {
-                            "speaker": message["speaker"],
-                            "message": message["message"],
-                            "tags": message["tags"],
-                            "context": message.get("context", []),
-                            "isProcessed": True,
-                            "isExplained": message.get("isExplained", False),
-                        },
-                        routing_key=tag_value  # Use tag value as the routing key
-                    )
-            else:
-                logging.warning("No tags found in the message. Skipping routing to discussion_exchange.")
-                if not tags:
-                    logging.warning("No tags found in the message. Sending to context_queue.")
-                    rabbitmq_manager.publish_message(
-                        {
-                            "speaker": message["speaker"],
-                            "message": message["message"],
-                            "context": message.get("context", []),
-                            "isProcessed": True,
-                            "isExplained": False,
-                        },
-                        routing_key="context_queue"
-                    )
     except WebSocketDisconnect:
         logging.warning("WebSocket client disconnected.")
     except Exception as e:
@@ -170,16 +153,19 @@ async def process_message(queue_name, message):
     """
     Processes RabbitMQ messages and sends relevant ones to WebSocket clients.
     """
-    print("In process_message")
+   
     message_data = json.loads(message)
     speaker = message_data.get("speaker", "")
     previous_speaker = message_data.get("previous_speaker", "")
     content = message_data.get("message", "")
     context = message_data.get("context", [])
-    is_processed = message_data.get("isProcessed", False)
-
-    logging.info(f"Message received in {queue_name}: {message}")
-
+    previous_speaker = message_data.get("previous_speaker", "Not set")
+    logging.info(f"***************** In Process_message *****************")
+    logging.warning(f"- Message received in {queue_name}")
+    logging.warning(f"- Current speaker  {speaker}")
+    logging.warning(f"- Previous speaker  {previous_speaker}")
+    logging.warning(f"- Message  {message_data}")
+    logging.info(f"***********END debug***********")
     # Process messages from context_queue
     if queue_name == "context_queue":
         logging.info("Processing the final queue: context_queue")
@@ -187,7 +173,7 @@ async def process_message(queue_name, message):
             try:
                 message_data["read_aloud"] = speaker != "Moderator"
                 await connection.send_text(json.dumps(message_data))
-                logging.info(f"Message sent to WebSocket client: {message_data}")
+                logging.critical(f"Message sent to WebSocket client: {message_data}")
             except Exception as e:
                 logging.error(f"Failed to send message to WebSocket client: {e}")
                 client_connections.discard(connection)
@@ -223,6 +209,7 @@ async def process_message(queue_name, message):
     user_prompt = (
         f"The Moderator has set the topic: '{content}'. "
         f"The last message in the discussion was: '{last_message}'. "
+        f"DO NOT ADD ANY EMOTICONS, IMAGES OR EMOTITIONAL ICONS "
         f"Craft a strictly 2-line response that is smart, witty, and infused with light humor. "
         f"Keep it brief and engaging, avoiding repetition of the moderator's question or the prior context."
     )
@@ -234,21 +221,22 @@ async def process_message(queue_name, message):
             persona["model_name"]
         )
         generated_message = response.get("content", "No response generated.")
+        generated_message = remove_emoticons(generated_message)
         logging.info(f"{agent_name} response generated: {generated_message}")
 
         # Add the agent's response to the context
         updated_context = context + [{"speaker": agent_name, "message": generated_message}]
 
         # Publish response back to discussion_exchange without routing keys
-        rabbitmq_manager.publish_message(
-            {
-                "speaker": agent_name,
-                "message": generated_message,
-                "context": updated_context,
-                "previous_speaker": agent_name,  # Add the agent as the previous speaker
-                "isProcessed": True
-            }
-        )
+        # rabbitmq_manager.publish_message(
+        #     {
+        #         "speaker": agent_name,
+        #         "message": generated_message,
+        #         "context": updated_context,
+        #         "previous_speaker": agent_name,  # Add the agent as the previous speaker
+        #         "isProcessed": True
+        #     }
+        # )
 
         # Publish response to context_queue for WebSocket updates
         rabbitmq_manager.publish_message(

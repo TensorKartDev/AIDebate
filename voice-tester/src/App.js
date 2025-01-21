@@ -26,7 +26,7 @@ function VoiceTester() {
     // Create a new utterance
     const utterance = new SpeechSynthesisUtterance(testText);
     utterance.voice = voice;
-
+    //console.log(utterance)
     // Track the currently playing voice
     setCurrentVoice(voice.name);
 
