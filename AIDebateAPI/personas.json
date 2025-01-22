@@ -26,7 +26,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "walter", "everyone","marketing", "technology", "innovation",
+            "everyone","walter", "everyone","marketing", "technology", "innovation",
             "business transformation", "customer experience", "usability", 
             "product design", "next-gen devices", "tech strategy", "growth",
             "cloud computing", "AI hardware", "creative", "trends"
@@ -42,10 +42,10 @@
         "voice_language": "com.apple.voice.compact.he-IL.Carmit",
         "elevenlabs_voice": "eleven-labs-voice-id", 
         "useElevenLabs": false, 
-        "pitch": 1.2, 
-        "rate": 1,
+        "pitch": 0.5, 
+        "rate": 0.95,
         "relevant_tags": [
-            "alex","biotech", "genomics", "healthcare", "personalized medicine", 
+            "everyone","alex","biotech", "genomics", "healthcare", "personalized medicine", 
             "DNA sequencing", "genomics innovation", "environmental", 
             "biotechnology advancements", "pharmaceutical AI", "biology", 
             "humor in science", "biological research", "bioinformatics", 
@@ -65,7 +65,7 @@
         "pitch": 1.2, 
         "rate": 1,
         "relevant_tags": [
-            "julia","climate", "sustainability", "renewable energy", "environment", 
+            "everyone","julia","climate", "sustainability", "renewable energy", "environment", 
             "waste reduction", "carbon footprint", "green tech",
             "solar", "water conservation", "wind", "innovation",
             "environmental policy", "sustainable development goals", "humor"
@@ -81,10 +81,10 @@
         "voice_language": "com.apple.voice.compact.en-IN.Rishi",
         "elevenlabs_voice": "9BWtsMINqrJLrRacOk9x", 
         "useElevenLabs": false, 
-        "pitch": 1.2, 
+        "pitch": 1, 
         "rate": 1,
         "relevant_tags": [
-            "steve", "AI ethics", "transparency", "fairness", "accountability", 
+            "everyone", "steve", "AI ethics", "transparency", "fairness", "accountability", 
             "AI governance", "responsible AI", "ethical", "AI laws", 
             "data privacy", "bias mitigation", "policy innovation", 
             "ethical development", "trustworthy AI"

@@ -205,7 +205,7 @@ async def process_message(queue_name, message):
         )
 
     last_message = context[-1]["message"] if context else ""
-
+    
     user_prompt = (
         f"The Moderator has set the topic: '{content}'. "
         f"The last message in the discussion was: '{last_message}'. "

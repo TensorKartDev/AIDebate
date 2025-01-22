@@ -9,43 +9,39 @@ function VoiceTester() {
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
       console.log("Loaded voices:", availableVoices);
-      setVoices(availableVoices);
+      if (availableVoices.length > 0) {
+        setVoices(availableVoices);
+      } else {
+        console.warn("No voices available.");
+      }
     };
 
     if (window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
-    loadVoices(); // Call directly in case voices are already loaded
+    loadVoices(); // Load voices directly
   }, []);
 
   const playVoice = (voice) => {
-    // Stop any currently playing voice
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // Stop any currently playing voice
 
-    // Create a new utterance
     const utterance = new SpeechSynthesisUtterance(testText);
     utterance.voice = voice;
-    //console.log(utterance)
-    // Track the currently playing voice
-    setCurrentVoice(voice.name);
 
-    utterance.onend = () => {
-      setCurrentVoice(null);
-    };
+    setCurrentVoice(voice.name); // Track currently playing voice
 
+    utterance.onend = () => setCurrentVoice(null);
     utterance.onerror = () => {
       console.error("Error during voice playback:", voice.name);
       setCurrentVoice(null);
     };
 
-    // Speak the text
     window.speechSynthesis.speak(utterance);
   };
 
   const stopVoice = () => {
-    // Cancel all ongoing speech
-    window.speechSynthesis.cancel();
+    window.speechSynthesis.cancel(); // Stop all ongoing speech
     setCurrentVoice(null);
   };
 
@@ -88,6 +84,7 @@ function VoiceTester() {
                     cursor: "pointer",
                   }}
                   disabled={currentVoice === voice.name}
+                  aria-label={`Play ${voice.name}`}
                 >
                   Play
                 </button>
@@ -101,6 +98,7 @@ function VoiceTester() {
                     cursor: "pointer",
                   }}
                   disabled={currentVoice !== voice.name}
+                  aria-label={`Stop ${voice.name}`}
                 >
                   Stop
                 </button>
@@ -109,7 +107,10 @@ function VoiceTester() {
           ))}
         </ul>
       ) : (
-        <p>No voices available. Please check your browser settings.</p>
+        <p>
+          No voices available. Please check your browser settings or ensure that the Speech Synthesis API is
+          supported.
+        </p>
       )}
     </div>
   );
