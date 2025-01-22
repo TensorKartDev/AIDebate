@@ -203,15 +203,16 @@ async def process_message(queue_name, message):
             f"Your name is {persona['name']}, and your role is {persona['description']}. "
             f"You respond to discussions with wit and insight."
         )
-
+    name = persona['name']
     last_message = context[-1]["message"] if context else ""
     
     user_prompt = (
+        f"Remember your name is {name}, never include your own name in response."
         f"The Moderator has set the topic: '{content}'. "
         f"The last message in the discussion was: '{last_message}'. "
         f"DO NOT ADD ANY EMOTICONS, IMAGES OR EMOTITIONAL ICONS "
         f"Craft a strictly 2-line response that is smart, witty, and infused with light humor. "
-        f"Keep it brief and engaging, avoiding repetition of the moderator's question or the prior context."
+        f"Keep it brief and engaging,avoiding repetition of the moderator's question or the prior context."
     )
 
     try:

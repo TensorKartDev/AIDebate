@@ -60,6 +60,7 @@ const Transcript = ({ history, personas, highlightedTextId, speakMessage, isList
             name: entry.speaker || "Unknown Speaker",
             image: "/images/default-avatar.png",
             description: "No description available",
+            persona: entry.persona || "Moderator"
           };
 
           return (
@@ -85,6 +86,7 @@ const Transcript = ({ history, personas, highlightedTextId, speakMessage, isList
               <div className="message-container">
                 <div className="message-header">
                   <strong>{persona.name}</strong>
+                  <strong>({persona.persona})</strong>
                   <span className="message-timestamp">
                     {new Date(entry.timestamp || Date.now()).toLocaleTimeString([], {
                       hour: "2-digit",
